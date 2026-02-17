@@ -22,16 +22,26 @@ from .heatmap import make_grid
 import time
 import httpx
 
+
 app = FastAPI(title="DriveSafe-AI Backend", version="1.0")
 
-# CORS so frontend can call later
+
+
+
+
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # hackathon mode; later set specific domains
+    allow_origins=[
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 _HEATMAP_CACHE = {}  # key -> (timestamp, data)
 def _haversine_m(lat1, lon1, lat2, lon2):
     R = 6371000
@@ -177,7 +187,18 @@ async def predict_next(trip_id: int, minutes_since_start: int):
 async def fleet_drivers(company_id: int):
     async with SessionLocal() as db:
         rows = (await db.execute(select(Driver).where(Driver.company_id == company_id))).scalars().all()
-    return [{"driver_id": d.id, "name": d.name} for d in rows]
+    return [
+    {
+        "id": d.id,
+        "name": d.name,
+        "vehicle": "N/A",
+        "active": True,
+        "total_trips": 0,
+        "avg_risk": 0
+    }
+    for d in rows
+]
+
 
 @app.get("/fleet/trips/recent")
 async def fleet_recent_trips(company_id: int, limit: int = 20):
@@ -185,17 +206,30 @@ async def fleet_recent_trips(company_id: int, limit: int = 20):
         trips = (await db.execute(
             select(Trip).where(Trip.company_id == company_id).order_by(Trip.started_at.desc()).limit(limit)
         )).scalars().all()
-    return [{"trip_id": t.id, "driver_id": t.driver_id, "started_at": str(t.started_at), "ended_at": str(t.ended_at) if t.ended_at else None} for t in trips]
+    return [
+    {
+        "id": t.id,
+        "start_time": str(t.started_at),
+        "duration_minutes": 0,
+        "distance_km": 0,
+        "avg_risk": 0,
+        "drowsy_events": 0,
+        "high_risk_events": 0,
+        "status": "completed"
+    }
+    for t in trips
+]
+
 
 @app.get("/charts/trip")
 async def chart_trip(trip_id: int, limit: int = 200):
     points = await timeseries_risk(trip_id, limit)
-    return {"trip_id": trip_id, "points": points}
+    return points
 
 @app.get("/charts/daily")
 async def chart_daily(company_id: int, days: int = 14, driver_id: int | None = None):
     points = await daily_metrics(company_id, days, driver_id)
-    return {"company_id": company_id, "points": points}
+    return points
 
 @app.get("/risk/heatmap")
 async def risk_heatmap(

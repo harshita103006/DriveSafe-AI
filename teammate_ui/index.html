@@ -90,12 +90,11 @@
             from { transform: translateX(-50%) translateY(-100px); }
             to { transform: translateX(-50%) translateY(500px); }
         }
-        
-        /* 16:9 Container */
+       
         .app-container {
-            width: 90vw;
-            max-width: 1200px;
-            aspect-ratio: 16/9;
+            width: 95vw;
+            max-width: 1400px;
+            min-height: 90vh;   /* important */
             background: linear-gradient(135deg, rgba(10, 14, 39, 0.9) 0%, rgba(6, 8, 24, 0.95) 100%);
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -106,6 +105,7 @@
             border: 1px solid rgba(255, 107, 53, 0.2);
             margin: 2rem auto;
         }
+
         
         /* Header */
         header {
@@ -928,6 +928,7 @@
             }
         }
     </style>
+    
 </head>
 <body>
     <div class="road-lines">
@@ -1256,7 +1257,8 @@
             </div>
             
             <!-- Fleet Management Tab -->
-            <div id="fleet-tab" class="tab-content">
+            <div id="fleet-tab" cla
+            s="tab-content">
                 <div class="tab-header">
                     <div class="tab-title">
                         <i class="fas fa-users"></i>
@@ -1367,14 +1369,20 @@
     
     <!-- Leaflet JS for maps -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
+
     <script>
         // Global variables
         let stream = null;
         let map = null;
         let userLocation = null;
         let monitoringActive = false;
-        let drowsinessDetectionInterval = null;
+        let blinkDetectionActive = false;
+        let model = null;
+        let eyeClosedStart = null;
+        let alarmInterval = null;
+
         let riskZoneInterval = null;
         let heatmapInterval = null;
         let currentTripId = null;
@@ -1390,6 +1398,7 @@
         let zoneRiskScore = 0;
         let finalRiskScore = 0;
         let charts = {};
+       
         
         // Backend API base URL
         const API_BASE_URL = 'http://127.0.0.1:8000';
@@ -1582,30 +1591,29 @@
             getEmergencyHelp();
         }
         
-        // Get risk zone from backend
-        async function getRiskZone() {
-            if (!userLocation) return;
-            
-            try {
-                const response = await fetch(
-                    `${API_BASE_URL}/risk/zone?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=500`
-                );
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    riskZoneData = data;
-                    zoneRiskScore = data.risk_score || 0;
-                    
-                    // Update risk meter
-                    updateRiskMeter();
-                    
-                    // Update risk reasons
-                    updateRiskReasons(data.reasons || []);
-                }
-            } catch (error) {
-                console.error('Error getting risk zone:', error);
-            }
+      async function getRiskZone() {
+    if (!userLocation) return;
+
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/risk/zone?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=500`
+        );
+
+        if (response.ok) {
+            const data = await response.json();
+
+            // Correct handling
+            riskZoneData = data;
+            zoneRiskScore = data.risk_score || 0;
+
+            updateRiskMeter();
+            updateRiskReasons(data.reasons || []);
         }
+    } catch (error) {
+        console.error('Error getting risk zone:', error);
+    }
+}
+
         
         // Get heatmap from backend
         async function getHeatmap() {
@@ -1802,46 +1810,48 @@
                 showNotification('success', 'Emergency Call', 'Calling 112...');
             }
         }
-        
-        // Toggle monitoring
+   
         async function toggleMonitoring() {
-            if (!monitoringActive) {
-                try {
-                    // Start a new trip
-                    await startNewTrip();
-                    
-                    // Request camera permission
-                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    
-                    // Set video source
-                    cameraFeed.srcObject = stream;
-                    
-                    // Hide overlay
-                    cameraOverlay.style.display = 'none';
-                    
-                    // Update status
-                    cameraStatus.classList.remove('inactive');
-                    cameraStatus.classList.add('active');
-                    cameraStatus.innerHTML = '<i class="fas fa-video"></i><span>Camera On</span>';
-                    
-                    // Update button
-                    startMonitoringBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Monitoring';
-                    
-                    // Start drowsiness detection simulation
-                    startDrowsinessDetection();
-                    
-                    monitoringActive = true;
-                    
-                    showNotification('success', 'Monitoring Started', 'DriveSafe is now active and monitoring for drowsiness.');
-                } catch (error) {
-                    console.error('Error accessing camera:', error);
-                    showNotification('error', 'Camera Error', 'Unable to access your camera. Please check permissions.');
-                }
-            } else {
+
+            if (monitoringActive) {
                 stopMonitoring();
+                return;
+            }
+
+            try {
+                // 1️⃣ Start camera
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                cameraFeed.srcObject = stream;
+                await cameraFeed.play();
+
+                monitoringActive = true;
+                console.log("Camera started");
+
+            } catch (err) {
+                console.error("Camera error:", err);
+                return;
+            }
+
+            try {
+                // 2️⃣ Load model
+                await loadBlinkModel();
+
+                // 3️⃣ ACTIVATE detection
+                blinkDetectionActive = true;
+
+                console.log("Blink detection active:", blinkDetectionActive);
+
+                // 4️⃣ Start detection loop
+                detectEyes();
+
+                console.log("Detection started");
+
+            } catch (err) {
+                console.error("Model error:", err);
             }
         }
-        
+
+
         // Start a new trip
         async function startNewTrip() {
             try {
@@ -1869,16 +1879,35 @@
             }
         }
         
-        // Stop monitoring
+    
         function stopMonitoring() {
+
+            blinkDetectionActive = false;
+            monitoringActive = false;
+
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
                 stream = null;
             }
-            
+
             cameraFeed.srcObject = null;
-            cameraOverlay.style.display = 'flex';
-            
+            cameraOverlay.style.display = "flex";
+
+            cameraStatus.classList.remove('active');
+            cameraStatus.classList.add('inactive');
+            cameraStatus.innerHTML = '<i class="fas fa-video-slash"></i><span>Camera Off</span>';
+
+            startMonitoringBtn.innerHTML = '<i class="fas fa-play"></i> Start Monitoring';
+
+            stopAlarm();
+
+            drowsinessIndicator.classList.remove('alert');
+            drowsinessIndicator.innerHTML = '<i class="fas fa-eye"></i><span>Monitoring Drowsiness</span>';
+
+            showNotification('success', 'Monitoring Stopped', 'DriveSafe has been deactivated.');
+        }
+
+    
             // Update status
             cameraStatus.classList.remove('active');
             cameraStatus.classList.add('inactive');
@@ -1887,11 +1916,7 @@
             // Update button
             startMonitoringBtn.innerHTML = '<i class="fas fa-play"></i> Start Monitoring';
             
-            // Stop drowsiness detection
-            if (drowsinessDetectionInterval) {
-                clearInterval(drowsinessDetectionInterval);
-                drowsinessDetectionInterval = null;
-            }
+            
             
             // Reset drowsiness indicator
             drowsinessIndicator.classList.remove('alert');
@@ -1900,42 +1925,10 @@
             monitoringActive = false;
             
             showNotification('success', 'Monitoring Stopped', 'DriveSafe has been deactivated.');
-        }
+    
         
         // Simulate drowsiness detection
-        function startDrowsinessDetection() {
-            // In a real app, this would use computer vision to detect drowsiness
-            // For this prototype, we'll simulate random drowsiness alerts
-            drowsinessDetectionInterval = setInterval(() => {
-                // Generate a random drowsy score between 0 and 100
-                drowsyScore = Math.floor(Math.random() * 100);
-                
-                // 20% chance of detecting drowsiness in each interval
-                if (Math.random() < 0.2) {
-                    // Show drowsiness alert
-                    drowsinessIndicator.classList.add('alert');
-                    drowsinessIndicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Drowsiness Detected!</span>';
-                    
-                    // Play alert sound (in a real app)
-                    playAlertSound();
-                    
-                    // Show notification
-                    showNotification('warning', 'Drowsiness Alert', 'Drowsiness detected! Please take a break.');
-                    
-                    // Send telemetry data to backend
-                    sendTelemetry();
-                    
-                    // Reset after 5 seconds
-                    setTimeout(() => {
-                        drowsinessIndicator.classList.remove('alert');
-                        drowsinessIndicator.innerHTML = '<i class="fas fa-eye"></i><span>Monitoring Drowsiness</span>';
-                    }, 5000);
-                }
-                
-                // Update risk meter with current drowsy score
-                updateRiskMeter();
-            }, 5000);
-        }
+        
         
         // Test drowsiness alert
         function testDrowsinessAlert() {
@@ -2052,6 +2045,90 @@
                 osc3.stop(audioContext.currentTime + 0.5);
             }, 1200);
         }
+
+        async function loadBlinkModel() {
+            if (model) return;
+
+            model = await faceLandmarksDetection.createDetector(
+                faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
+                {
+                    runtime: 'tfjs',
+                    refineLandmarks: true,
+                    maxFaces: 1
+                }
+            );
+
+            console.log("Blink model loaded correctly");
+        }
+
+
+
+        async function detectEyes() {
+
+            if (!blinkDetectionActive || !model) {
+                requestAnimationFrame(detectEyes);
+                return;
+            }
+
+            try {
+                const predictions = await model.estimateFaces(cameraFeed);
+                console.log("Predictions:", predictions);
+
+                if (predictions.length > 0) {
+
+                    const keypoints = predictions[0].keypoints;
+
+                    const leftTop = keypoints[159];
+                    const leftBottom = keypoints[145];
+                    const rightTop = keypoints[386];
+                    const rightBottom = keypoints[374];
+
+                    const leftDistance = Math.abs(leftTop.y - leftBottom.y);
+                    const rightDistance = Math.abs(rightTop.y - rightBottom.y);
+
+                    const eyeDistance = (leftDistance + rightDistance) / 2;
+
+                    console.log("Eye distance:", eyeDistance);
+
+                    if (eyeDistance < 12) {
+
+                        if (!eyeClosedStart) {
+                            eyeClosedStart = Date.now();
+                        }
+
+                        if (Date.now() - eyeClosedStart > 1500) {
+                            console.log("DROWSINESS DETECTED");
+                            triggerAlarm();
+                        }
+
+                    } else {
+                        eyeClosedStart = null;
+                        stopAlarm();
+                    }
+                }
+
+            } catch (err) {
+                console.error("Detection error:", err);
+            }
+
+            requestAnimationFrame(detectEyes);
+        }
+
+
+
+
+
+        function triggerAlarm() {
+            if (alarmInterval) return;
+
+            drowsinessIndicator.classList.add('alert');
+            drowsinessIndicator.innerHTML =
+                '<i class="fas fa-exclamation-triangle"></i><span>DROWSINESS DETECTED!</span>';
+
+            alarmInterval = setInterval(playAlertSound, 800);
+        }
+
+
         
         // Initialize charts
         function initializeCharts() {
@@ -2352,6 +2429,10 @@
             loadTripChart();
             checkPredictiveAlert();
         }
+
+
+
+
         
         // Load daily chart
         async function loadDailyChart() {
