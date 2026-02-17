@@ -21,9 +21,21 @@ import asyncio
 from .heatmap import make_grid
 import time
 import httpx
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
 
 
 app = FastAPI(title="DriveSafe-AI Backend", version="1.0")
+FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend_static"
+
+if FRONTEND_DIR.exists():
+    app.mount("/ui", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="ui")
+
+    @app.get("/")
+    def serve_home():
+        return FileResponse(str(FRONTEND_DIR / "index.html"))
+
 
 
 
@@ -36,11 +48,72 @@ app.add_middleware(
     allow_origins=[
         "http://127.0.0.1:5500",
         "http://localhost:5500",
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+from pydantic import BaseModel
+from typing import Dict, List, Any, Optional
+from uuid import uuid4
+from time import time
+
+# ---- Models ----
+class TripStartRequest(BaseModel):
+    driver_id: Optional[str] = "demo_driver"
+
+class TripStartResponse(BaseModel):
+    trip_id: str
+    started_at: float
+
+class TripEndResponse(BaseModel):
+    trip_id: str
+    ended_at: float
+
+class EventIn(BaseModel):
+    trip_id: str
+    event: str                 # e.g. "blink", "drowsy_alert", "camera_started"
+    ts: Optional[float] = None
+    meta: Optional[Dict[str, Any]] = None
+
+class EventOut(EventIn):
+    id: str
+
+# ---- In-memory storage (DEMO) ----
+TRIPS: Dict[str, Dict[str, Any]] = {}
+EVENTS: Dict[str, List[Dict[str, Any]]] = {}
+
+@app.post("/api/trips/start", response_model=TripStartResponse)
+def start_trip(body: TripStartRequest):
+    trip_id = str(uuid4())
+    started_at = time()
+    TRIPS[trip_id] = {"driver_id": body.driver_id, "started_at": started_at, "ended_at": None}
+    EVENTS[trip_id] = []
+    return {"trip_id": trip_id, "started_at": started_at}
+
+@app.post("/api/trips/{trip_id}/end", response_model=TripEndResponse)
+def end_trip(trip_id: str):
+    if trip_id not in TRIPS:
+        return {"trip_id": trip_id, "ended_at": time()}  # demo: soft fail
+    TRIPS[trip_id]["ended_at"] = time()
+    return {"trip_id": trip_id, "ended_at": TRIPS[trip_id]["ended_at"]}
+
+@app.post("/api/events", response_model=EventOut)
+def post_event(e: EventIn):
+    if e.ts is None:
+        e.ts = time()
+    ev = {"id": str(uuid4()), "trip_id": e.trip_id, "event": e.event, "ts": e.ts, "meta": e.meta or {}}
+    if e.trip_id not in EVENTS:
+        EVENTS[e.trip_id] = []
+    EVENTS[e.trip_id].append(ev)
+    return ev
+
+@app.get("/api/trips/{trip_id}/events")
+def get_events(trip_id: str):
+    return {"trip_id": trip_id, "events": EVENTS.get(trip_id, [])}
+
 
 _HEATMAP_CACHE = {}  # key -> (timestamp, data)
 def _haversine_m(lat1, lon1, lat2, lon2):
