@@ -1,70 +1,165 @@
-# Getting Started with Create React App
+🚗 DriveSafe-AI
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Real-Time Driver Safety & Risk Monitoring System
 
-## Available Scripts
+DriveSafe-AI is an end-to-end intelligent driver safety platform that combines real-time drowsiness detection with environmental risk analysis to proactively prevent road accidents. The system monitors driver alertness using computer vision and augments it with geospatial road-risk intelligence to generate live safety insights.
 
-In the project directory, you can run:
+✨ Key Features
+👁️ Driver Drowsiness Detection
 
-### `npm start`
+Real-time face monitoring using MediaPipe Face Mesh
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Eye Aspect Ratio (EAR) based blink and drowsiness detection
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Instant audible alerts (beep) on drowsy condition
 
-### `npm test`
+Floating camera monitoring mode
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+🧠 Risk Intelligence Engine
 
-### `npm run build`
+Combines driver state + road environment risk
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Weighted risk scoring model
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Real-time safety level classification (Safe → Critical)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+🗺️ Geospatial Risk Analysis
 
-### `npm run eject`
+Road risk evaluation using OpenStreetMap data
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Intersection, crossing, and signal analysis
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Dynamic risk heatmap generation
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Nearby emergency services detection
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+📊 Live Dashboard
 
-## Learn More
+Real-time risk meter
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Driver event log
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Heatmap visualization
 
-### Code Splitting
+Trip lifecycle monitoring
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+🔗 Telemetry & Event Pipeline
 
-### Analyzing the Bundle Size
+Trip start/stop tracking
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+Event streaming to backend
 
-### Making a Progressive Web App
+Async FastAPI services
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+Scalable REST architecture
 
-### Advanced Configuration
+🏗️ System Architecture
+Camera → Frontend (JS) → FastAPI Backend → Risk Engine → Dashboard
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+Flow:
 
-### Deployment
+Camera captures driver face
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+EAR algorithm detects drowsiness
 
-### `npm run build` fails to minify
+Frontend sends telemetry events
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Backend computes risk
+
+Dashboard updates in real time
+
+🧪 Live vs Demo Components
+Component	Status
+Drowsiness detection	✅ Live
+Camera monitoring	✅ Live
+Trip & event pipeline	✅ Live
+Risk scoring	✅ Live
+Heatmap generation	⚡ Semi-live (OSM based)
+Dashboard charts	🧪 Demo/seeded
+Predictive risk model	🧪 Lightweight heuristic
+🛠️ Tech Stack
+
+Backend
+
+Python
+
+FastAPI
+
+AsyncIO
+
+HTTPX
+
+Computer Vision
+
+MediaPipe Face Mesh
+
+OpenCV
+
+EAR algorithm
+
+Frontend
+
+JavaScript
+
+HTML/CSS
+
+REST API integration
+
+Data Sources
+
+OpenStreetMap (Overpass API)
+
+🚀 Getting Started
+1️⃣ Clone Repository
+git clone https://github.com/<your-username>/DriveSafe-AI.git
+cd DriveSafe-AI
+2️⃣ Backend Setup
+cd backend
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+
+Open:
+
+http://127.0.0.1:8000/docs
+3️⃣ Frontend Setup
+cd frontend_static
+python -m http.server 5500
+
+Open:
+
+http://localhost:5500
+🎯 Demo Flow
+
+Click Start Monitoring
+
+Camera activates
+
+Drowsiness triggers alert
+
+Risk meter updates
+
+Events appear in dashboard
+
+🔒 Design Decisions
+
+Lightweight deterministic logic for real-time reliability
+
+Async backend for low latency
+
+Modular architecture for future ML upgrades
+
+CORS-enabled secure frontend-backend communication
+
+🔮 Future Scope
+
+LSTM-based driver fatigue prediction
+
+Edge deployment for in-vehicle systems
+
+Fleet-level analytics
+
+Mobile app integration
+
+Advanced behavior modeling
