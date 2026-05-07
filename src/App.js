@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
+import { startTrip, endTrip, postEvent } from "./api";
 
 const EYE_THRESHOLD = 0.012;
 const SLEEP_FRAMES = 10;
@@ -9,8 +10,12 @@ export default function App() {
   const videoRef = useRef(null);
   const faceMeshRef = useRef(null);
   const cameraRef = useRef(null);
+  
   const eyeClosedFrames = useRef(0);
   const alarmRef = useRef(null);
+  const tripIdRef = useRef(null);
+  const alarmSentRef = useRef(false);   // taaki drowsy event 1000 baar na jaye
+  const [monitoring, setMonitoring] = useState(false);
 
   const [sleeping, setSleeping] = useState(false);
   const [alarmOn, setAlarmOn] = useState(false);
@@ -28,6 +33,43 @@ export default function App() {
       }
     } catch {}
   };
+
+  const startMonitoring = async () => {
+  // trip start
+  const t = await startTrip("driver_01");
+  tripIdRef.current = t.trip_id;
+  alarmSentRef.current = false;
+
+  // camera start (existing cameraRef use karo)
+  if (cameraRef.current) {
+    try { cameraRef.current.start(); } catch {}
+  }
+
+  setMonitoring(true);
+  await postEvent(tripIdRef.current, "camera_started");
+};
+
+const stopMonitoring = async () => {
+  // camera stop
+  if (cameraRef.current) {
+    try { cameraRef.current.stop(); } catch {}
+  }
+
+  setMonitoring(false);
+
+  if (tripIdRef.current) {
+    await postEvent(tripIdRef.current, "camera_stopped");
+    await endTrip(tripIdRef.current);
+    tripIdRef.current = null;
+  }
+
+  // alarm reset
+  setAlarmOn(false);
+  setSleeping(false);
+  eyeClosedFrames.current = 0;
+  alarmSentRef.current = false;
+  if (alarmRef.current) alarmRef.current.pause();
+};
 
   /* ---------- LOAD MEDIAPIPE ---------- */
   useEffect(() => {
@@ -91,6 +133,12 @@ export default function App() {
 
           alarmRef.current.play().catch(()=>{});
           setAlarmOn(true);
+          if (tripIdRef.current && !alarmSentRef.current) {
+            alarmSentRef.current = true;
+            postEvent(tripIdRef.current, "drowsy_alert", {
+              closed_frames: eyeClosedFrames.current
+            });
+          }
         }
       });
 
@@ -102,14 +150,14 @@ export default function App() {
         height: 480,
       });
 
-      cam.start();
+      //cam.start();
       cameraRef.current = cam;
     };
 
     load();
 
     return () => cameraRef.current && cameraRef.current.stop();
-  }, [alarmOn]);
+  }, []);
 
   return (
     <div style={app}>
@@ -133,6 +181,12 @@ export default function App() {
       </div>
 
       <div style={{display:"flex",gap:16}}>
+        {!monitoring ? (
+          <button style={btn} onClick={startMonitoring}>START MONITORING</button>
+        ) : (
+          <button style={btn} onClick={stopMonitoring}>STOP MONITORING</button>
+        )}
+
         <button style={btn} onClick={togglePiP}>
           {pipOn ? "EXIT FLOAT" : "FLOAT MODE"}
         </button>

@@ -58,7 +58,7 @@ app.add_middleware(
 from pydantic import BaseModel
 from typing import Dict, List, Any, Optional
 from uuid import uuid4
-from time import time
+import time
 
 # ---- Models ----
 class TripStartRequest(BaseModel):
@@ -88,7 +88,8 @@ EVENTS: Dict[str, List[Dict[str, Any]]] = {}
 @app.post("/api/trips/start", response_model=TripStartResponse)
 def start_trip(body: TripStartRequest):
     trip_id = str(uuid4())
-    started_at = time()
+    started_at = time.time()
+
     TRIPS[trip_id] = {"driver_id": body.driver_id, "started_at": started_at, "ended_at": None}
     EVENTS[trip_id] = []
     return {"trip_id": trip_id, "started_at": started_at}
@@ -96,14 +97,14 @@ def start_trip(body: TripStartRequest):
 @app.post("/api/trips/{trip_id}/end", response_model=TripEndResponse)
 def end_trip(trip_id: str):
     if trip_id not in TRIPS:
-        return {"trip_id": trip_id, "ended_at": time()}  # demo: soft fail
-    TRIPS[trip_id]["ended_at"] = time()
+        return {"trip_id": trip_id, "ended_at": time.time()} # demo: soft fail
+    TRIPS[trip_id]["ended_at"] = time.time()
     return {"trip_id": trip_id, "ended_at": TRIPS[trip_id]["ended_at"]}
 
 @app.post("/api/events", response_model=EventOut)
 def post_event(e: EventIn):
     if e.ts is None:
-        e.ts = time()
+        e.ts = time.time()
     ev = {"id": str(uuid4()), "trip_id": e.trip_id, "event": e.event, "ts": e.ts, "meta": e.meta or {}}
     if e.trip_id not in EVENTS:
         EVENTS[e.trip_id] = []

@@ -1,0 +1,3769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriveSafe-AI - Advanced Driver Safety System</title>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet CSS for maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary-orange: #ff6b35;
+            --secondary-orange: #ff8c42;
+            --primary-blue: #3b82f6;
+            --primary-dark: #2563eb;
+            --success-green: #27ae60;
+            --danger-red: #e74c3c;
+            --warning-yellow: #f39c12;
+            --dark-bg: #0a0e27;
+            --darker-bg: #060818;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --text-light: #ffffff;
+            --text-dim: #a0a0a0;
+            --text-muted: #64748b;
+            --border-color: #334155;
+            --border-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Background with road effect */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at center, transparent 0%, rgba(10, 14, 39, 0.8) 100%),
+                linear-gradient(180deg, #0a0e27 0%, #060818 100%);
+            z-index: -2;
+        }
+        
+        /* Animated road lines */
+        .road-lines {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            overflow: hidden;
+            z-index: -1;
+        }
+        
+        .road-line {
+            position: absolute;
+            width: 80px;
+            height: 4px;
+            background-color: var(--primary-orange);
+            left: 50%;
+            transform: translateX(-50%);
+            animation: roadMove 2s linear infinite;
+        }
+        
+        .road-line:nth-child(1) { top: 20px; animation-delay: 0s; }
+        .road-line:nth-child(2) { top: 50px; animation-delay: 0.5s; }
+        .road-line:nth-child(3) { top: 80px; animation-delay: 1s; }
+        
+        @keyframes roadMove {
+            from { transform: translateX(-50%) translateY(-100px); }
+            to { transform: translateX(-50%) translateY(500px); }
+        }
+        
+        /* App Container */
+        .app-container {
+            width: 95vw;
+            max-width: 1600px;
+            min-height: 90vh;
+            background: linear-gradient(135deg, rgba(10, 14, 39, 0.9) 0%, rgba(6, 8, 24, 0.95) 100%);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            margin: 2rem auto;
+        }
+        
+        /* Header */
+        header {
+            padding: 1.5rem 2rem;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 107, 53, 0.1);
+            flex-shrink: 0;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-orange);
+        }
+        
+        .logo i {
+            font-size: 2rem;
+        }
+        
+        .status-bar {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+        
+        .status-indicator.active {
+            background: rgba(39, 174, 96, 0.2);
+            color: var(--success-green);
+        }
+        
+        .status-indicator.inactive {
+            background: rgba(231, 76, 60, 0.2);
+            color: var(--danger-red);
+        }
+        
+        /* Main Content */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Home Screen */
+        .home-screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .home-screen.active {
+            display: flex;
+        }
+        
+        .hero-section {
+            text-align: center;
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.8s ease;
+        }
+        
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, var(--text-light), var(--primary-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-dim);
+            margin-bottom: 2rem;
+        }
+        
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 3rem;
+        }
+        
+        .btn {
+            padding: 0.8rem 2rem;
+            border: none;
+            border-radius: 30px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-orange), var(--secondary-orange));
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-dim);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--text-light);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-green), #2ecc71);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger-red), #c0392b);
+            color: white;
+        }
+        
+        /* Feature Cards Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: auto;
+            padding-bottom: 2rem;
+        }
+        
+        .feature-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-orange), var(--secondary-orange));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 15px 40px rgba(255, 107, 53, 0.2);
+        }
+        
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 2rem;
+            color: white;
+            position: relative;
+            transition: var(--transition);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .feature-icon.drive {
+            background: linear-gradient(135deg, var(--primary-orange), var(--secondary-orange));
+        }
+        
+        .feature-icon.emergency {
+            background: linear-gradient(135deg, var(--danger-red), #c0392b);
+        }
+        
+        .feature-icon.analytics {
+            background: linear-gradient(135deg, var(--success-green), #2ecc71);
+        }
+        
+        .feature-icon.fleet {
+            background: linear-gradient(135deg, var(--warning-yellow), #e67e22);
+        }
+        
+        .feature-card:hover .feature-icon {
+            transform: scale(1.1);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+        }
+        
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-light);
+        }
+        
+        .feature-description {
+            font-size: 0.95rem;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+        
+        .feature-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--danger-red);
+            color: white;
+            border-radius: 12px;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.75rem;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .tab-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+        
+        .tab-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        
+        .tab-title i {
+            color: var(--primary-orange);
+        }
+        
+        .back-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-light);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* FIXED: Driving Monitoring Screen Layout */
+        .driving-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr auto;
+            gap: 1.5rem;
+            flex: 1;
+            min-height: 0;
+
+            /* 🔥 Fix */
+            max-height: none;     /* remove the clamp */
+            overflow-y: auto;     /* allow scroll */
+            align-content: start; /* keep items from stretching weird */
+            padding-right: 6px;   /* scrollbar space */
+        }
+        
+        .driving-content .camera-section {
+            grid-column: 1;
+            grid-row: 1 / span 2;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-height: 0;
+        }
+        
+        .driving-content .map-section {
+            grid-column: 2;
+            grid-row: 1 / span 2;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-height: 0;
+        }
+        
+        .driving-content .event-log-section {
+            grid-column: 1 / span 2;
+            grid-row: 3;
+            min-height: 200px;
+            max-height: 250px;
+        }
+        
+        /* Camera Section */
+        .camera-container {
+            position: relative;
+            width: 100%;
+            height: 280px;
+            background: #000;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            flex-shrink: 0;
+        }
+        
+        #camera-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+        
+        .camera-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+        
+        .camera-control-btn {
+            background: rgba(0, 0, 0, 0.7);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+        
+        .camera-control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .drowsiness-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--border-radius);
+            font-size: 1.1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+        
+        .drowsiness-indicator.alert {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--danger-red);
+            border-color: rgba(231, 76, 60, 0.3);
+            animation: pulse 1.5s infinite;
+        }
+        
+        /* Risk Meter */
+        .risk-meter-container {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 1.2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+        }
+        
+        .risk-meter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+        
+        .risk-meter-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .risk-score {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .risk-meter {
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 0.8rem;
+        }
+        
+        .risk-meter-fill {
+            height: 100%;
+            border-radius: 12px;
+            transition: width 0.5s ease, background-color 0.5s ease;
+            width: 0%;
+        }
+        
+        .risk-low { background-color: var(--success-green); }
+        .risk-medium { background-color: var(--warning-yellow); }
+        .risk-high { background-color: var(--secondary-orange); }
+        .risk-critical { background-color: var(--danger-red); }
+        
+        .risk-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+        
+        .risk-reasons {
+            margin-top: 0.8rem;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+        
+        .risk-reasons::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .risk-reasons::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+        }
+        
+        .risk-reasons::-webkit-scrollbar-thumb {
+            background: var(--primary-orange);
+            border-radius: 2px;
+        }
+        
+        .risk-reason {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.4rem;
+            font-size: 0.9rem;
+        }
+        
+        .risk-reason i {
+            color: var(--warning-yellow);
+            font-size: 0.8rem;
+        }
+        
+        /* Control Buttons */
+        .control-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .control-buttons .btn {
+            flex: 1;
+            justify-content: center;
+        }
+        
+        /* Map Section */
+        .map-container {
+            flex: 1;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            position: relative;
+            min-height: 300px;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Emergency Panel */
+        .emergency-panel {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 1.2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
+            max-height: 280px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .emergency-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+        
+        .emergency-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--danger-red);
+        }
+        
+        .emergency-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+        }
+        
+        .emergency-tab {
+            padding: 0.4rem 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            border-radius: 6px;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.85rem;
+        }
+        
+        .emergency-tab.active {
+            background: rgba(231, 76, 60, 0.2);
+            color: var(--text-light);
+        }
+        
+        .emergency-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 0.8rem;
+        }
+        
+        .emergency-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .emergency-list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+        }
+        
+        .emergency-list::-webkit-scrollbar-thumb {
+            background: var(--danger-red);
+            border-radius: 2px;
+        }
+        
+        .emergency-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: var(--transition);
+        }
+        
+        .emergency-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .emergency-item:last-child {
+            border-bottom: none;
+        }
+        
+        .emergency-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        .emergency-distance {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+        
+        .emergency-button {
+            background: var(--danger-red);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: center;
+            font-size: 0.9rem;
+        }
+        
+        .emergency-button:hover {
+            background: #c0392b;
+        }
+        
+        /* Event Log Section */
+        .event-log-section{
+            min-height: 200px;
+            max-height: 250px;
+            overflow: hidden;
+            position: relative;
+            z-index: 5;
+        }
+        
+        .event-log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+        
+        .event-log-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .event-log-title i {
+            color: var(--primary-blue);
+        }
+        
+        .event-list {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+        
+        .event-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .event-list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+        }
+        
+        .event-list::-webkit-scrollbar-thumb {
+            background: var(--primary-blue);
+            border-radius: 2px;
+        }
+        
+        .event-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            padding: 0.6rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 6px;
+            border-left: 3px solid transparent;
+            transition: var(--transition);
+            animation: slideIn 0.3s ease;
+        }
+        
+        .event-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateX(4px);
+        }
+        
+        .event-item.info {
+            border-left-color: var(--primary-blue);
+        }
+        
+        .event-item.success {
+            border-left-color: var(--success-green);
+        }
+        
+        .event-item.warning {
+            border-left-color: var(--warning-yellow);
+        }
+        
+        .event-item.error {
+            border-left-color: var(--danger-red);
+        }
+        
+        .event-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+        
+        .event-item.info .event-icon {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--primary-blue);
+        }
+        
+        .event-item.success .event-icon {
+            background: rgba(39, 174, 96, 0.2);
+            color: var(--success-green);
+        }
+        
+        .event-item.warning .event-icon {
+            background: rgba(243, 156, 18, 0.2);
+            color: var(--warning-yellow);
+        }
+        
+        .event-item.error .event-icon {
+            background: rgba(231, 76, 60, 0.2);
+            color: var(--danger-red);
+        }
+        
+        .event-content {
+            flex: 1;
+        }
+        
+        .event-message {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 0.2rem;
+            line-height: 1.3;
+        }
+        
+        .event-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        /* Fleet Content */
+        .fleet-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            height: calc(100% - 100px);
+            overflow-y: auto;
+        }
+        
+        .fleet-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .driver-list, .trip-list {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .list-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .list-item {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .list-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .list-item:last-child {
+            border-bottom: none;
+        }
+        
+        .list-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .list-item-name {
+            font-weight: 500;
+        }
+        
+        .list-item-status {
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-active {
+            background: rgba(39, 174, 96, 0.2);
+            color: var(--success-green);
+        }
+        
+        .status-inactive {
+            background: rgba(231, 76, 60, 0.2);
+            color: var(--danger-red);
+        }
+        
+        .list-item-details {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+        
+        .trip-details {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .trip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .trip-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .trip-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .trip-info-label {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+        
+        .trip-info-value {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        
+        /* Predictive Alert */
+        .predictive-alert {
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid var(--primary-orange);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .predictive-alert i {
+            font-size: 2rem;
+            color: var(--primary-orange);
+        }
+        
+        .predictive-alert-content h4 {
+            margin-bottom: 0.5rem;
+            color: var(--primary-orange);
+        }
+        
+        /* Fleet Actions */
+        .fleet-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .action-btn {
+            flex: 1;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+        }
+        
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .action-btn.primary {
+            background: var(--primary-orange);
+            border-color: var(--primary-orange);
+        }
+        
+        .action-btn.primary:hover {
+            background: var(--secondary-orange);
+        }
+        
+        /* Dashboard Cards */
+        .dashboard-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: 100%;
+        }
+        
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .dashboard-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .dashboard-subtitle {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-top: 0.3rem;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 250px;
+        }
+        
+        /* Emergency Contact */
+        .emergency-contact {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 1rem;
+        }
+        
+        .emergency-contact:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--dark-bg);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-dim);
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: var(--text-light);
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-orange);
+        }
+        
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            background: var(--dark-bg);
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 2000;
+            max-width: 350px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.warning {
+            border-left: 4px solid var(--warning-yellow);
+        }
+        
+        .notification.warning .notification-icon {
+            color: var(--warning-yellow);
+        }
+        
+        .notification.success {
+            border-left: 4px solid var(--success-green);
+        }
+        
+        .notification.success .notification-icon {
+            color: var(--success-green);
+        }
+        
+        .notification.error {
+            border-left: 4px solid var(--danger-red);
+        }
+        
+        .notification.error .notification-icon {
+            color: var(--danger-red);
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* Loading Animation */
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--text-muted);
+            border-top: 2px solid var(--primary-orange);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .driving-content {
+                display: grid;
+                grid-template-columns: 1fr;           /* tumhare layout ke hisaab se */
+                grid-template-rows: auto auto auto auto;
+                gap: 1.5rem;
+
+                flex: 1;
+                min-height: 0;
+
+                max-height: none;      /* remove clamp */
+                overflow-y: auto;      /* 🔥 THIS FIXES OVERLAP */
+                align-content: start;  /* prevents stretching */
+                padding-right: 6px;    /* scrollbar space */
+            }
+            
+            .driving-content .camera-section {
+                grid-column: 1;
+                grid-row: 1;
+            }
+            
+            .driving-content .map-section {
+                grid-column: 1;
+                grid-row: 2;
+                min-height: 300px;
+            }
+            
+            .driving-content .event-log-section {
+                grid-column: 1;
+                grid-row: 3;
+                max-height: 200px;
+            }
+            
+            .fleet-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .app-container {
+                width: 95vw;
+                margin: 1rem auto;
+                min-height: 95vh;
+            }
+            
+            .hero-title {
+                font-size: 1.8rem;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .feature-card {
+                padding: 1.5rem;
+            }
+            
+            .feature-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+            
+            .camera-container {
+                height: 200px;
+            }
+            
+            .control-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="road-lines">
+        <div class="road-line"></div>
+        <div class="road-line"></div>
+        <div class="road-line"></div>
+    </div>
+    
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                <span>DriveSafe-AI</span>
+            </div>
+            <div class="status-bar">
+                <div class="status-indicator inactive" id="camera-status">
+                    <i class="fas fa-video"></i>
+                    <span>Camera Off</span>
+                </div>
+                <div class="status-indicator inactive" id="location-status">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Location Off</span>
+                </div>
+                <div class="status-indicator active" id="backend-status">
+                    <i class="fas fa-server"></i>
+                    <span>Backend On</span>
+                </div>
+            </div>
+        </header>
+        
+        <main>
+            <!-- Home Screen with Feature Cards -->
+            <div id="home-screen" class="home-screen active">
+                <div class="hero-section">
+                    <h1 class="hero-title">Stay Awake, Stay Safe</h1>
+                    <p class="hero-subtitle">Advanced Driver Safety & Risk Management System</p>
+                    
+                    <div class="hero-buttons">
+                        <button class="btn btn-primary" onclick="showQuickStart()">
+                            <i class="fas fa-play"></i>
+                            Quick Start
+                        </button>
+                        <button class="btn btn-secondary" onclick="showHowItWorks()">
+                            <i class="fas fa-info-circle"></i>
+                            How It Works
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="features-grid">
+                    <div class="feature-card" onclick="showTab('driving')">
+                        <div class="feature-badge">LIVE</div>
+                        <div class="feature-icon drive">
+                            <i class="fas fa-car"></i>
+                        </div>
+                        <h3 class="feature-title">Drive Safe Monitoring</h3>
+                        <p class="feature-description">Real-time drowsiness detection with AI-powered risk assessment and dynamic safety alerts</p>
+                    </div>
+                    
+                    <div class="feature-card" onclick="showTab('emergency')">
+                        <div class="feature-icon emergency">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h3 class="feature-title">Emergency Response</h3>
+                        <p class="feature-description">Instant access to nearby hospitals, police stations, and emergency hotlines with one-click navigation</p>
+                    </div>
+                    
+                    <div class="feature-card" onclick="showTab('analytics')">
+                        <div class="feature-icon analytics">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3 class="feature-title">Analytics Dashboard</h3>
+                        <p class="feature-description">Comprehensive insights into driving patterns, risk trends, and safety performance metrics</p>
+                    </div>
+                    
+                    <div class="feature-card" onclick="showTab('fleet')">
+                        <div class="feature-icon fleet">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h3 class="feature-title">Fleet Management</h3>
+                        <p class="feature-description">Manage drivers, monitor trips, and predict risks with advanced fleet analytics</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- FIXED: Driving Monitoring Tab with Proper Layout -->
+            <div id="driving-tab" class="tab-content">
+                <div class="tab-header">
+                    <div class="tab-title">
+                        <i class="fas fa-car"></i>
+                        Drive Safe Monitoring
+                    </div>
+                    <button class="back-button" onclick="showHome()">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Home
+                    </button>
+                </div>
+                
+                <div class="driving-content">
+                    <!-- Camera Section -->
+                    <div class="camera-section">
+                        <div class="camera-container">
+                            <video id="camera-feed" autoplay muted></video>
+                            <div class="camera-overlay" id="camera-overlay">
+                                <div style="text-align: center;">
+                                    <i class="fas fa-video-slash fa-3x mb-3"></i>
+                                    <p>Click "Start Monitoring" to activate camera</p>
+                                </div>
+                            </div>
+                            <div class="camera-controls">
+                                <button class="camera-control-btn" onclick="toggleCameraMute()" title="Toggle Audio">
+                                    <i class="fas fa-microphone-slash" id="audio-icon"></i>
+                                </button>
+                                <button class="camera-control-btn" onclick="switchCamera()" title="Switch Camera">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="drowsiness-indicator" id="drowsiness-indicator">
+                            <i class="fas fa-eye"></i>
+                            <span>Monitoring Drowsiness</span>
+                        </div>
+                        
+                        <div class="risk-meter-container">
+                            <div class="risk-meter-header">
+                                <div class="risk-meter-title">Current Risk Level</div>
+                                <div class="risk-score" id="risk-score">0</div>
+                            </div>
+                            
+                            <div class="risk-meter">
+                                <div class="risk-meter-fill" id="risk-meter-fill"></div>
+                            </div>
+                            
+                            <div class="risk-labels">
+                                <span>Low (0-30)</span>
+                                <span>Medium (31-60)</span>
+                                <span>High (61-80)</span>
+                                <span>Critical (81+)</span>
+                            </div>
+                            
+                            <div class="risk-reasons" id="risk-reasons">
+                                <div class="risk-reason">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>System ready for monitoring</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="control-buttons">
+                            <button class="btn btn-primary" id="start-monitoring" onclick="toggleMonitoring()">
+                                <i class="fas fa-play"></i>
+                                Start Monitoring
+                            </button>
+                            <button class="btn btn-secondary" id="test-alert" onclick="testDrowsinessAlert()">
+                                <i class="fas fa-bell"></i>
+                                Test Alert
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Map Section -->
+                    <div class="map-section">
+                        <div class="map-container">
+                            <div id="map"></div>
+                        </div>
+                        
+                        <div class="emergency-panel">
+                            <div class="emergency-header">
+                                <div class="emergency-title">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Emergency Help
+                                </div>
+                            </div>
+                            
+                            <div class="emergency-tabs">
+                                <button class="emergency-tab active" data-emergency="hospitals" onclick="showEmergencyList('hospitals')">Hospitals</button>
+                                <button class="emergency-tab" data-emergency="police" onclick="showEmergencyList('police')">Police</button>
+                                <button class="emergency-tab" data-emergency="shelters" onclick="showEmergencyList('shelters')">Shelters</button>
+                            </div>
+                            
+                            <div class="emergency-list" id="emergency-list">
+                                <!-- Emergency list will be populated here -->
+                            </div>
+                            
+                            <button class="emergency-button" onclick="makeEmergencyCall()">
+                                <i class="fas fa-phone-alt"></i>
+                                Emergency Call (112)
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Event Log Section - Now properly positioned -->
+                    <div class="event-log-section">
+                        <div class="event-log-header">
+                            <div class="event-log-title">
+                                <i class="fas fa-list"></i>
+                                Event Log
+                            </div>
+                            <button class="btn btn-secondary" onclick="clearEvents()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                                <i class="fas fa-trash"></i>
+                                Clear
+                            </button>
+                        </div>
+                        
+                        <div class="event-list" id="event-list">
+                            <!-- Events will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Fleet Management Tab -->
+            <div id="fleet-tab" class="tab-content">
+                <div class="tab-header">
+                    <div class="tab-title">
+                        <i class="fas fa-users"></i>
+                        Fleet Management
+                    </div>
+                    <button class="back-button" onclick="showHome()">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Home
+                    </button>
+                </div>
+                
+                <div class="fleet-content">
+                    <div class="fleet-sidebar">
+                        <div class="driver-list">
+                            <div class="list-header">
+                                <div class="list-title">Drivers</div>
+                                <button class="btn btn-primary" id="add-driver" onclick="showAddDriverModal()">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <div class="driver-list-container" id="driver-list">
+                                <!-- Driver list will be populated here -->
+                            </div>
+                        </div>
+                        
+                        <div class="trip-list">
+                            <div class="list-header">
+                                <div class="list-title">Recent Trips</div>
+                                <button class="btn btn-secondary" id="refresh-trips" onclick="loadRecentTrips()">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                            <div class="trip-list-container" id="trip-list">
+                                <!-- Trip list will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="trip-details">
+                        <div class="predictive-alert" id="predictive-alert" style="display: none;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <div class="predictive-alert-content">
+                                <h4>Predictive Risk Alert</h4>
+                                <p id="predictive-message">High risk predicted in next 30 minutes</p>
+                            </div>
+                        </div>
+                        
+                        <div class="trip-header">
+                            <div class="list-title">Fleet Analytics</div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="btn btn-secondary" onclick="refreshFleetData()">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                                <button class="btn btn-primary" onclick="exportFleetData()">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="trip-info">
+                            <div class="trip-info-item">
+                                <div class="trip-info-label">Selected Driver</div>
+                                <div class="trip-info-value" id="selected-driver">No driver selected</div>
+                            </div>
+                            <div class="trip-info-item">
+                                <div class="trip-info-label">Total Drivers</div>
+                                <div class="trip-info-value" id="total-drivers">0</div>
+                            </div>
+                            <div class="trip-info-item">
+                                <div class="trip-info-label">Active Drivers</div>
+                                <div class="trip-info-value" id="active-drivers">0</div>
+                            </div>
+                            <div class="trip-info-item">
+                                <div class="trip-info-label">Total Trips</div>
+                                <div class="trip-info-value" id="total-trips">0</div>
+                            </div>
+                            <div class="trip-info-item">
+                                <div class="trip-info-label">Avg Risk Score</div>
+                                <div class="trip-info-value" id="fleet-avg-risk">0</div>
+                            </div>
+                            <div class="trip-info-item">
+                                <div class="trip-info-label">High Risk Trips</div>
+                                <div class="trip-info-value" id="high-risk-trips">0</div>
+                            </div>
+                        </div>
+                        
+                        <div class="fleet-actions">
+                            <button class="action-btn" onclick="showAddDriverModal()">
+                                <i class="fas fa-user-plus"></i>
+                                Add Driver
+                            </button>
+                            <button class="action-btn" onclick="showAddTripModal()">
+                                <i class="fas fa-route"></i>
+                                Add Trip
+                            </button>
+                            <button class="action-btn primary" onclick="generateReport()">
+                                <i class="fas fa-file-alt"></i>
+                                Generate Report
+                            </button>
+                        </div>
+                        
+                        <div class="chart-container" style="height: 250px; margin-top: 1.5rem;">
+                            <canvas id="fleet-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Analytics Dashboard Tab -->
+            <div id="analytics-tab" class="tab-content">
+                <div class="tab-header">
+                    <div class="tab-title">
+                        <i class="fas fa-chart-line"></i>
+                        Analytics Dashboard
+                    </div>
+                    <button class="back-button" onclick="showHome()">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Home
+                    </button>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem; padding: 2rem;">
+                    <div class="dashboard-card">
+                        <div class="dashboard-header">
+                            <div>
+                                <div class="dashboard-title">Daily Risk Analysis</div>
+                                <div class="dashboard-subtitle">Last 14 days</div>
+                            </div>
+                            <button class="btn btn-secondary" id="refresh-daily" onclick="refreshDashboard()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="daily-chart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <div class="dashboard-header">
+                            <div>
+                                <div class="dashboard-title">Trip Analysis</div>
+                                <div class="dashboard-subtitle">Current trip</div>
+                            </div>
+                            <button class="btn btn-secondary" id="refresh-trip" onclick="refreshDashboard()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="trip-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Emergency Response Tab -->
+            <div id="emergency-tab" class="tab-content">
+                <div class="tab-header">
+                    <div class="tab-title">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Emergency Response System
+                    </div>
+                    <button class="back-button" onclick="showHome()">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Home
+                    </button>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 2rem;">
+                    <div>
+                        <div class="dashboard-card">
+                            <div class="dashboard-header">
+                                <div>
+                                    <div class="dashboard-title">Emergency Hotlines</div>
+                                    <div class="dashboard-subtitle">One-tap emergency contacts</div>
+                                </div>
+                            </div>
+                            <div style="display: grid; gap: 1rem;">
+                                <div class="emergency-contact" onclick="callEmergency('112')">
+                                    <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--danger-red); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem;">
+                                        <i class="fas fa-phone-alt"></i>
+                                    </div>
+                                    <div>
+                                        <h4 style="margin-bottom: 0.3rem;">Emergency Services</h4>
+                                        <p style="color: var(--text-dim);">112 - Primary Emergency</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="emergency-contact" onclick="callEmergency('911')">
+                                    <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--warning-yellow); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem;">
+                                        <i class="fas fa-ambulance"></i>
+                                    </div>
+                                    <div>
+                                        <h4 style="margin-bottom: 0.3rem;">Medical Emergency</h4>
+                                        <p style="color: var(--text-dim);">911 - Ambulance & Medical</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="emergency-contact" onclick="callEmergency('311')">
+                                    <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--primary-orange); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem;">
+                                        <i class="fas fa-car-crash"></i>
+                                    </div>
+                                    <div>
+                                        <h4 style="margin-bottom: 0.3rem;">Roadside Assistance</h4>
+                                        <p style="color: var(--text-dim);">311 - Vehicle Breakdown</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="dashboard-card" style="height: 100%;">
+                            <div class="dashboard-header">
+                                <div>
+                                    <div class="dashboard-title">Nearby Emergency Services</div>
+                                    <div class="dashboard-subtitle">Based on your current location</div>
+                                </div>
+                            </div>
+                            
+                            <div class="emergency-tabs" style="margin-bottom: 1rem;">
+                                <button class="emergency-tab active" onclick="showEmergencyListFull('hospitals')">Hospitals</button>
+                                <button class="emergency-tab" onclick="showEmergencyListFull('police')">Police</button>
+                                <button class="emergency-tab" onclick="showEmergencyListFull('shelters')">Shelters</button>
+                            </div>
+                            
+                            <div class="emergency-list" id="emergency-list-full" style="max-height: 400px; overflow-y: auto;">
+                                <!-- Emergency list will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Add Driver Modal -->
+    <div class="modal" id="add-driver-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Driver</h3>
+                <button class="modal-close" onclick="closeModal('add-driver-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Driver Name</label>
+                    <input type="text" id="driver-name" placeholder="Enter driver name">
+                </div>
+                <div class="form-group">
+                    <label>License Number</label>
+                    <input type="text" id="driver-license" placeholder="Enter license number">
+                </div>
+                <div class="form-group">
+                    <label>Vehicle</label>
+                    <input type="text" id="driver-vehicle" placeholder="Enter vehicle details">
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="driver-phone" placeholder="Enter phone number">
+                </div>
+                <div class="form-group">
+                    <label>Department</label>
+                    <select id="driver-department">
+                        <option value="">Select department</option>
+                        <option value="logistics">Logistics</option>
+                        <option value="delivery">Delivery</option>
+                        <option value="transport">Transport</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeModal('add-driver-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="addNewDriver()">Add Driver</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Trip Modal -->
+    <div class="modal" id="add-trip-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Trip</h3>
+                <button class="modal-close" onclick="closeModal('add-trip-modal')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Select Driver</label>
+                    <select id="trip-driver">
+                        <option value="">Select driver</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Route</label>
+                    <input type="text" id="trip-route" placeholder="Enter route details">
+                </div>
+                <div class="form-group">
+                    <label>Estimated Duration (minutes)</label>
+                    <input type="number" id="trip-duration" placeholder="Enter duration">
+                </div>
+                <div class="form-group">
+                    <label>Estimated Distance (km)</label>
+                    <input type="number" id="trip-distance" placeholder="Enter distance">
+                </div>
+                <div class="form-group">
+                    <label>Purpose</label>
+                    <select id="trip-purpose">
+                        <option value="">Select purpose</option>
+                        <option value="delivery">Delivery</option>
+                        <option value="pickup">Pickup</option>
+                        <option value="transport">Transport</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeModal('add-trip-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="addNewTrip()">Add Trip</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification -->
+    <div class="notification" id="notification">
+        <i class="notification-icon fas fa-info-circle"></i>
+        <div>
+            <h4 id="notification-title">Notification</h4>
+            <p id="notification-message">This is a notification message.</p>
+        </div>
+    </div>
+    
+    <!-- Leaflet JS for maps -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // Global variables
+        let stream = null;
+        let map = null;
+        let userLocation = { lat: 40.7128, lng: -74.0060 }; // Default: NYC
+        let monitoringActive = false;
+        let drowsinessDetectionInterval = null;
+        let riskZoneInterval = null;
+        let heatmapInterval = null;
+        let currentTripId = null;
+        let currentDriverId = null;
+        let emergencyData = {
+            hospitals: [],
+            police: [],
+            shelters: []
+        };
+        let riskZoneData = null;
+        let heatmapData = null;
+        let drowsyScore = 0;
+        let zoneRiskScore = 0;
+        let finalRiskScore = 0;
+        let charts = {};
+        let drivers = [];
+        let trips = [];
+        let currentCamera = 'user';
+        let isAudioMuted = true;
+        let events = [];
+        let totalTrips = 0;
+        let alertsPrevented = 0;
+        let systemStartTime = Date.now();
+        
+        // DOM Elements
+        const cameraFeed = document.getElementById('camera-feed');
+        const cameraOverlay = document.getElementById('camera-overlay');
+        const cameraStatus = document.getElementById('camera-status');
+        const locationStatus = document.getElementById('location-status');
+        const backendStatus = document.getElementById('backend-status');
+        const startMonitoringBtn = document.getElementById('start-monitoring');
+        const testAlertBtn = document.getElementById('test-alert');
+        const drowsinessIndicator = document.getElementById('drowsiness-indicator');
+        const riskScore = document.getElementById('risk-score');
+        const riskMeterFill = document.getElementById('risk-meter-fill');
+        const riskReasons = document.getElementById('risk-reasons');
+        const emergencyList = document.getElementById('emergency-list');
+        const emergencyListFull = document.getElementById('emergency-list-full');
+        const predictiveAlert = document.getElementById('predictive-alert');
+        const predictiveMessage = document.getElementById('predictive-message');
+        const eventList = document.getElementById('event-list');
+        
+        // Mock Backend API
+        /*class MockBackendAPI {
+            constructor() {
+                this.tripId = 1000;
+                this.riskZones = this.generateRiskZones();
+                this.emergencyServices = this.generateEmergencyServices();
+            }
+            
+            generateRiskZones() {
+                const zones = [];
+                const baseLat = userLocation.lat;
+                const baseLng = userLocation.lng;
+                
+                for (let i = 0; i < 9; i++) {
+                    const lat = baseLat + (Math.random() - 0.5) * 0.01;
+                    const lng = baseLng + (Math.random() - 0.5) * 0.01;
+                    zones.push({
+                        lat: lat,
+                        lng: lng,
+                        risk_score: Math.floor(Math.random() * 100),
+                        reasons: this.generateRiskReasons()
+                    });
+                }
+                return zones;
+            }
+            
+            generateRiskReasons() {
+                const allReasons = [
+                    'High traffic density detected',
+                    'Adverse weather conditions',
+                    'Poor road conditions',
+                    'Construction zone nearby',
+                    'Historical accident hotspot',
+                    'Sharp curve ahead',
+                    'Limited visibility',
+                    'School zone active'
+                ];
+                
+                const numReasons = Math.floor(Math.random() * 3) + 1;
+                const reasons = [];
+                
+                for (let i = 0; i < numReasons; i++) {
+                    const reason = allReasons[Math.floor(Math.random() * allReasons.length)];
+                    if (!reasons.includes(reason)) {
+                        reasons.push(reason);
+                    }
+                }
+                
+                return reasons;
+            }
+            
+            generateEmergencyServices() {
+                const services = {
+                    hospitals: [],
+                    police: [],
+                    shelters: []
+                };
+                
+                const hospitalNames = [
+                    'City General Hospital', 'St. Mary\'s Medical Center', 'Memorial Hospital',
+                    'University Medical Center', 'Community Hospital', 'Regional Medical Center'
+                ];
+                
+                const policeNames = [
+                    'Central Police Station', 'North Precinct', 'South District Police',
+                    'East Side Police', 'West End Station', 'Highway Patrol Office'
+                ];
+                
+                const shelterNames = [
+                    'Emergency Shelter A', 'Safe Haven Center', 'Community Refuge',
+                    'Storm Shelter', 'Crisis Center', 'Emergency Housing'
+                ];
+                
+                hospitalNames.forEach(name => {
+                    const lat = userLocation.lat + (Math.random() - 0.5) * 0.05;
+                    const lng = userLocation.lng + (Math.random() - 0.5) * 0.05;
+                    const distance = this.calculateDistance(userLocation.lat, userLocation.lng, lat, lng);
+                    
+                    services.hospitals.push({
+                        name: name,
+                        lat: lat,
+                        lng: lng,
+                        distance_m: distance
+                    });
+                });
+                
+                policeNames.forEach(name => {
+                    const lat = userLocation.lat + (Math.random() - 0.5) * 0.05;
+                    const lng = userLocation.lng + (Math.random() - 0.5) * 0.05;
+                    const distance = this.calculateDistance(userLocation.lat, userLocation.lng, lat, lng);
+                    
+                    services.police.push({
+                        name: name,
+                        lat: lat,
+                        lng: lng,
+                        distance_m: distance
+                    });
+                });
+                
+                shelterNames.forEach(name => {
+                    const lat = userLocation.lat + (Math.random() - 0.5) * 0.05;
+                    const lng = userLocation.lng + (Math.random() - 0.5) * 0.05;
+                    const distance = this.calculateDistance(userLocation.lat, userLocation.lng, lat, lng);
+                    
+                    services.shelters.push({
+                        name: name,
+                        lat: lat,
+                        lng: lng,
+                        distance_m: distance
+                    });
+                });
+                
+                // Sort by distance
+                Object.keys(services).forEach(key => {
+                    services[key].sort((a, b) => a.distance_m - b.distance_m);
+                });
+                
+                return services;
+            }
+            
+            calculateDistance(lat1, lng1, lat2, lng2) {
+                const R = 6371000; // Earth's radius in meters
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLng = (lng2 - lng1) * Math.PI / 180;
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                         Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                         Math.sin(dLng/2) * Math.sin(dLng/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c;
+            }
+            
+            async getRiskZone(lat, lng, radius) {
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const nearbyZones = this.riskZones.filter(zone => {
+                    const distance = this.calculateDistance(lat, lng, zone.lat, zone.lng);
+                    return distance <= radius;
+                });
+                
+                const avgRisk = nearbyZones.length > 0 
+                    ? Math.floor(nearbyZones.reduce((sum, zone) => sum + zone.risk_score, 0) / nearbyZones.length)
+                    : Math.floor(Math.random() * 50);
+                
+                const allReasons = nearbyZones.flatMap(zone => zone.reasons);
+                const uniqueReasons = [...new Set(allReasons)];
+                
+                return {
+                    risk_score: avgRisk,
+                    reasons: uniqueReasons.slice(0, 3),
+                    zones: nearbyZones
+                };
+            }
+            
+            async getHeatmap(lat, lng, grid, spacing, radius) {
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                const points = [];
+                const gridSize = Math.sqrt(grid);
+                const offset = (gridSize - 1) * spacing / 2;
+                
+                for (let i = 0; i < gridSize; i++) {
+                    for (let j = 0; j < gridSize; j++) {
+                        const pointLat = lat + (i * spacing - offset) / 111320;
+                        const pointLng = lng + (j * spacing - offset) / (111320 * Math.cos(lat * Math.PI / 180));
+                        
+                        const risk = Math.random() > 0.2 ? Math.floor(Math.random() * 100) : null;
+                        points.push({
+                            lat: pointLat,
+                            lng: pointLng,
+                            risk_score: risk
+                        });
+                    }
+                }
+                
+                return { points: points };
+            }
+            
+            async getEmergencyHelp(lat, lng, radius) {
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                // Filter services within radius
+                const filtered = {
+                    hospitals: this.emergencyServices.hospitals.filter(s => s.distance_m <= radius),
+                    police: this.emergencyServices.police.filter(s => s.distance_m <= radius),
+                    shelters: this.emergencyServices.shelters.filter(s => s.distance_m <= radius)
+                };
+                
+                return filtered;
+            }
+            
+            async startTrip(data) {
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                return {
+                    trip_id: `trip-${this.tripId++}`,
+                    status: 'started',
+                    message: 'Trip started successfully'
+                };
+            }
+            
+            async sendTelemetry(data) {
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 200));
+                
+                return {
+                    status: 'success',
+                    message: 'Telemetry data received'
+                };
+            }
+            
+            async makeEmergencyCall() {
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                return {
+                    primary: '112',
+                    secondary: '911',
+                    message: 'Emergency services contacted'
+                };
+            }
+        }*/
+        
+        const API = "http://localhost:8000";
+
+        async function apiGET(path) {
+            const r = await fetch(`${API}${path}`);
+            return r.json();
+        }
+        async function apiPOST(path, body) {
+            const r = await fetch(`${API}${path}`, {
+                method: "POST",
+                headers: {"Content-Type":"application/json"},
+                body: JSON.stringify(body)
+            });
+            return r.json();
+        }
+        
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            initializeMap();
+            requestLocationPermission();
+            checkBackendConnection();
+            initializeCharts();
+            loadFleetData();
+            initializeEventLog();
+            simulateBackendConnection();
+        });
+        
+        // Initialize event log
+        function initializeEventLog() {
+            addEvent('info', '🚀 System initialized successfully');
+            addEvent('success', '✅ DriveSafe-AI ready for monitoring');
+        }
+        
+        // Add event to log
+        function addEvent(type, message) {
+            const newEvent = {
+                id: Date.now(),
+                type,
+                message,
+                timestamp: new Date().toLocaleTimeString()
+            };
+            events.unshift(newEvent);
+            events = events.slice(0, 50); // Keep last 50 events
+            updateEventLog();
+        }
+        
+        // Update event log display
+        function updateEventLog() {
+            if (!eventList) return;
+            
+            if (events.length === 0) {
+                eventList.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                        <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 8px;"></i>
+                        <p>No events yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            eventList.innerHTML = events.map(event => {
+                const iconClass = getEventIcon(event.type);
+                return `
+                    <div class="event-item ${event.type}">
+                        <div class="event-icon">
+                            <i class="fas ${iconClass}"></i>
+                        </div>
+                        <div class="event-content">
+                            <div class="event-message">${event.message}</div>
+                            <div class="event-time">${event.timestamp}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Get event icon based on type
+        function getEventIcon(type) {
+            switch (type) {
+                case 'success': return 'fa-check-circle';
+                case 'warning': return 'fa-exclamation-triangle';
+                case 'error': return 'fa-times-circle';
+                default: return 'fa-info-circle';
+            }
+        }
+        
+        // Clear events
+        function clearEvents() {
+            events = [];
+            updateEventLog();
+            addEvent('info', '🗑️ Event log cleared');
+        }
+        
+        // Simulate backend connection
+        function simulateBackendConnection() {
+            setTimeout(() => {
+                backendStatus.classList.remove('inactive');
+                backendStatus.classList.add('active');
+                backendStatus.innerHTML = '<i class="fas fa-server"></i><span>Backend On</span>';
+                addEvent('success', '🔗 Successfully connected to DriveSafe backend');
+            }, 2000);
+        }
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            // Emergency tabs
+            document.querySelectorAll('.emergency-tab').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    const parent = e.target.closest('.tab-content, .dashboard-card');
+                    if (parent) {
+                        parent.querySelectorAll('.emergency-tab').forEach(t => t.classList.remove('active'));
+                        e.target.classList.add('active');
+                    }
+                });
+            });
+        }
+        
+        // Navigation functions
+        function showHome() {
+            hideAllTabs();
+            document.getElementById('home-screen').classList.add('active');
+        }
+        
+        function showTab(tabName) {
+            hideAllTabs();
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Load tab-specific data
+            if (tabName === 'analytics') {
+                loadDashboardData();
+            }
+        }
+        
+        function hideAllTabs() {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.getElementById('home-screen').classList.remove('active');
+        }
+        
+        // Quick start
+        function showQuickStart() {
+            showTab('driving');
+            setTimeout(() => {
+                if (!monitoringActive) {
+                    toggleMonitoring();
+                }
+            }, 500);
+        }
+        
+        // Show how it works
+        function showHowItWorks() {
+            showNotification('warning', 'How It Works', 'DriveSafe uses AI to monitor your eye movements and detect signs of drowsiness. Click on any feature to explore its capabilities.');
+        }
+        
+        // Initialize map
+        function initializeMap() {
+            map = L.map('map').setView([userLocation.lat, userLocation.lng], 13);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            // Add user location marker
+            L.marker([userLocation.lat, userLocation.lng]).addTo(map)
+                .bindPopup('Your Location')
+                .openPopup();
+        }
+        
+        // Request location permission
+        function requestLocationPermission() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        
+                        // Update map
+                        map.setView([userLocation.lat, userLocation.lng], 13);
+                        
+                        // Clear existing markers
+                        map.eachLayer((layer) => {
+                            if (layer instanceof L.Marker) {
+                                map.removeLayer(layer);
+                            }
+                        });
+                        
+                        // Add new user location marker
+                        L.marker([userLocation.lat, userLocation.lng]).addTo(map)
+                            .bindPopup('Your Location')
+                            .openPopup();
+                        
+                        // Update status
+                        locationStatus.classList.remove('inactive');
+                        locationStatus.classList.add('active');
+                        locationStatus.innerHTML = '<i class="fas fa-map-marker-alt"></i><span>Location On</span>';
+                        
+                        // Start periodic API calls
+                        startPeriodicApiCalls();
+                        
+                        addEvent('success', '📍 Location access granted');
+                    },
+                    (error) => {
+                        console.error('Error getting location:', error);
+                        addEvent('warning', '📍 Using default location. Enable location services for accurate features.');
+                        // Use default location and continue
+                        startPeriodicApiCalls();
+                    }
+                );
+            } else {
+                addEvent('warning', '📍 Location not supported. Using default location.');
+                startPeriodicApiCalls();
+            }
+        }
+        
+        // Check backend connection
+        function checkBackendConnection() {
+            // Simulate backend check
+            setTimeout(() => {
+                addEvent('success', '🔗 Backend connection established');
+            }, 2000);
+        }
+        
+        // Camera functions
+        async function toggleCameraMute() {
+            const audioIcon = document.getElementById('audio-icon');
+            isAudioMuted = !isAudioMuted;
+            
+            if (stream) {
+                stream.getAudioTracks().forEach(track => {
+                    track.enabled = !isAudioMuted;
+                });
+            }
+            
+            audioIcon.className = isAudioMuted ? 'fas fa-microphone-slash' : 'fas fa-microphone';
+            addEvent('info', isAudioMuted ? '🔇 Microphone muted' : '🔊 Microphone unmuted');
+        }
+        
+        async function switchCamera() {
+            if (!stream) return;
+            
+            // Stop current stream
+            stream.getTracks().forEach(track => track.stop());
+            
+            // Try to get the other camera
+            const constraints = {
+                video: {
+                    facingMode: currentCamera === 'user' ? 'environment' : 'user'
+                }
+            };
+            
+            try {
+                const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+                stream = newStream;
+                cameraFeed.srcObject = stream;
+                
+                currentCamera = currentCamera === 'user' ? 'environment' : 'user';
+                addEvent('success', `📷 Switched to ${currentCamera} camera`);
+            } catch (error) {
+                console.error('Error switching camera:', error);
+                addEvent('error', '📷 Unable to switch camera. Only one camera available.');
+                
+                // Restore original stream
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                cameraFeed.srcObject = stream;
+            }
+        }
+        
+        // Start periodic API calls
+        function startPeriodicApiCalls() {
+            // Get risk zone every 12 seconds
+            riskZoneInterval = setInterval(getRiskZone, 12000);
+            
+            // Get heatmap every 45 seconds
+            heatmapInterval = setInterval(getHeatmap, 45000);
+            
+            // Get emergency help once
+            getEmergencyHelp();
+        }
+        
+        // Get risk zone from backend
+        async function getRiskZone() {
+            try {
+                const data = await apiGET(`/risk/zone?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=500`);
+                riskZoneData = data;
+                zoneRiskScore = data.risk_score || 0;
+
+                updateRiskMeter();
+                updateRiskReasons(data.reasons || []);
+
+            } catch (error) {
+                console.error("Error getting risk zone:", error);
+                addEvent("error", "❌ /risk/zone API failed");
+            }
+        }
+        
+        // Get heatmap from backend
+        async function getHeatmap() {
+            try {
+                const data = await apiGET(
+                `/risk/heatmap?lat=${userLocation.lat}&lng=${userLocation.lng}&grid=9&spacing_m=300&radius=400`
+                );
+                heatmapData = data;
+                updateHeatmap();
+            } catch (error) {
+                console.error("Error getting heatmap:", error);
+                addEvent("error", "❌ /risk/heatmap API failed");
+            }
+        }
+        
+        // Get emergency help from backend
+        async function getEmergencyHelp() {
+            try {
+                const data = await apiGET(`/nearby/help?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=3000`);
+                emergencyData = data;
+
+                showEmergencyList("hospitals");
+                showEmergencyListFull("hospitals");
+            } catch (error) {
+                console.error("Error getting emergency help:", error);
+                addEvent("error", "❌ /nearby/help API failed");
+            }
+        }
+        
+        // Update risk meter
+        function updateRiskMeter() {
+            // Calculate final risk score (60% zone risk + 40% drowsy score)
+            finalRiskScore = Math.round((zoneRiskScore * 0.6) + (drowsyScore * 0.4));
+            
+            // Update risk score display
+            riskScore.textContent = finalRiskScore;
+            
+            // Update risk meter fill
+            riskMeterFill.style.width = `${finalRiskScore}%`;
+            
+            // Update risk meter color
+            riskMeterFill.className = 'risk-meter-fill';
+            if (finalRiskScore <= 30) {
+                riskMeterFill.classList.add('risk-low');
+            } else if (finalRiskScore <= 60) {
+                riskMeterFill.classList.add('risk-medium');
+            } else if (finalRiskScore <= 80) {
+                riskMeterFill.classList.add('risk-high');
+            } else {
+                riskMeterFill.classList.add('risk-critical');
+            }
+        }
+        
+        // Update risk reasons
+        function updateRiskReasons(reasons) {
+            riskReasons.innerHTML = '';
+            
+            if (reasons.length === 0) {
+                riskReasons.innerHTML = '<div class="risk-reason"><i class="fas fa-check-circle"></i><span>No specific risk factors detected</span></div>';
+                return;
+            }
+            
+            reasons.forEach(reason => {
+                const reasonElement = document.createElement('div');
+                reasonElement.className = 'risk-reason';
+                reasonElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>${reason}</span>`;
+                riskReasons.appendChild(reasonElement);
+            });
+        }
+        
+        // Update heatmap on map
+        function updateHeatmap() {
+            if (!map || !heatmapData || !heatmapData.points) return;
+            
+            // Clear existing heatmap layers
+            map.eachLayer((layer) => {
+                if (layer instanceof L.Circle && layer.options.heatmap) {
+                    map.removeLayer(layer);
+                }
+            });
+            
+            // Add heatmap points
+            heatmapData.points.forEach(point => {
+                if (point.risk_score === null) {
+                    // Grey tile for null risk
+                    L.circle([point.lat, point.lng], {
+                        radius: 150,
+                        color: '#888888',
+                        fillColor: '#888888',
+                        fillOpacity: 0.3,
+                        heatmap: true
+                    }).addTo(map);
+                } else {
+                    // Color based on risk score
+                    let color = '#27ae60'; // Green for low risk
+                    if (point.risk_score > 30 && point.risk_score <= 60) {
+                        color = '#f39c12'; // Yellow for medium risk
+                    } else if (point.risk_score > 60 && point.risk_score <= 80) {
+                        color = '#ff8c42'; // Orange for high risk
+                    } else if (point.risk_score > 80) {
+                        color = '#e74c3c'; // Red for critical risk
+                    }
+                    
+                    L.circle([point.lat, point.lng], {
+                        radius: 150,
+                        color: color,
+                        fillColor: color,
+                        fillOpacity: 0.3,
+                        heatmap: true
+                    }).addTo(map);
+                }
+            });
+        }
+        
+        // Show emergency list
+        function showEmergencyList(type) {
+            if (!emergencyData[type] || emergencyData[type].length === 0) {
+                emergencyList.innerHTML = '<div class="emergency-item">No nearby emergency services found</div>';
+                return;
+            }
+            
+            emergencyList.innerHTML = '';
+            
+            emergencyData[type].slice(0, 3).forEach(item => {
+                const emergencyItem = document.createElement('div');
+                emergencyItem.className = 'emergency-item';
+                
+                // Convert distance from meters to km
+                const distanceKm = (item.distance_m / 1000).toFixed(1);
+                
+                emergencyItem.innerHTML = `
+                    <div>
+                        <div class="emergency-name">${item.name}</div>
+                        <div class="emergency-distance">${distanceKm} km away</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="navigateToLocation(${item.lat}, ${item.lng})" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                        <i class="fas fa-directions"></i>
+                    </button>
+                `;
+                
+                emergencyList.appendChild(emergencyItem);
+            });
+        }
+        
+        // Show emergency list (full)
+        function showEmergencyListFull(type) {
+            if (!emergencyData[type] || emergencyData[type].length === 0) {
+                emergencyListFull.innerHTML = '<div class="emergency-item">No nearby emergency services found</div>';
+                return;
+            }
+            
+            emergencyListFull.innerHTML = '';
+            
+            emergencyData[type].forEach(item => {
+                const emergencyItem = document.createElement('div');
+                emergencyItem.className = 'emergency-item';
+                
+                // Convert distance from meters to km
+                const distanceKm = (item.distance_m / 1000).toFixed(1);
+                
+                emergencyItem.innerHTML = `
+                    <div>
+                        <div class="emergency-name">${item.name}</div>
+                        <div class="emergency-distance">${distanceKm} km away</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="navigateToLocation(${item.lat}, ${item.lng})" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                        <i class="fas fa-directions"></i>
+                    </button>
+                `;
+                
+                emergencyListFull.appendChild(emergencyItem);
+            });
+        }
+        
+        // Navigate to location
+        function navigateToLocation(lat, lng) {
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+            window.open(url, '_blank');
+            
+            addEvent('info', '🗺️ Opening navigation in Google Maps');
+        }
+        
+        // Call emergency
+        function callEmergency(number) {
+            window.location.href = `tel:${number}`;
+            addEvent('success', `📞 Calling emergency number ${number}...`);
+        }
+        
+        // Make emergency call
+        async function makeEmergencyCall() {
+            try {
+                const data = await apiGET(`/emergency/call`);
+                const primaryNumber = data.primary || '112';
+                
+                // In a real app, this would initiate a phone call
+                window.location.href = `tel:${primaryNumber}`;
+                
+                addEvent('success', `📞 Calling emergency services: ${primaryNumber}`);
+            } catch (error) {
+                console.error('Error making emergency call:', error);
+                // Fallback to default emergency number
+                window.location.href = `tel:112`;
+                addEvent('success', '📞 Calling emergency services: 112');
+            }
+        }
+        
+        // Toggle monitoring
+        async function toggleMonitoring() {
+            if (!monitoringActive) {
+                try {
+                    // Start a new trip
+                    await startNewTrip();
+                    
+                    // Request camera with better constraints
+                    const constraints = {
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'user',
+                            frameRate: { ideal: 30 }
+                        },
+                        audio: false
+                    };
+                    
+                    // Request camera permission
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    
+                    // Set video source
+                    cameraFeed.srcObject = stream;
+                    
+                    // Wait for video to be ready
+                    cameraFeed.onloadedmetadata = () => {
+                        // Hide overlay
+                        cameraOverlay.style.display = 'none';
+                        
+                        // Update status
+                        cameraStatus.classList.remove('inactive');
+                        cameraStatus.classList.add('active');
+                        cameraStatus.innerHTML = '<i class="fas fa-video"></i><span>Camera On</span>';
+                        
+                        // Update button
+                        startMonitoringBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Monitoring';
+                        
+                        // Start drowsiness detection simulation
+                        startDrowsinessDetection();
+                        
+                        monitoringActive = true;
+                        totalTrips++;
+                        
+                        addEvent('success', '🎥 Camera monitoring started');
+                        addEvent('info', '🤖 AI detection activated');
+                        addEvent('info', `🆔 Trip ${currentTripId} initiated`);
+                    };
+                    
+                } catch (error) {
+                    console.error('Error accessing camera:', error);
+                    
+                    // Try fallback with basic constraints
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                        cameraFeed.srcObject = stream;
+                        cameraOverlay.style.display = 'none';
+                        
+                        // Continue with basic setup
+                        cameraStatus.classList.remove('inactive');
+                        cameraStatus.classList.add('active');
+                        cameraStatus.innerHTML = '<i class="fas fa-video"></i><span>Camera On</span>';
+                        startMonitoringBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Monitoring';
+                        startDrowsinessDetection();
+                        monitoringActive = true;
+                        totalTrips++;
+                        
+                        addEvent('success', '🎥 Camera monitoring started (basic quality)');
+                        addEvent('warning', '📷 For better quality, ensure proper lighting and camera permissions');
+                    } catch (fallbackError) {
+                        console.error('Fallback camera error:', fallbackError);
+                        addEvent('error', '📷 Unable to access camera. Please check permissions.');
+                        
+                        // Start monitoring without camera for demo
+                        cameraOverlay.style.display = 'none';
+                        cameraOverlay.innerHTML = '<div style="text-align: center;"><i class="fas fa-video fa-3x mb-3"></i><p>Simulating camera feed for demo</p></div>';
+                        cameraOverlay.style.display = 'flex';
+                        
+                        cameraStatus.classList.remove('inactive');
+                        cameraStatus.classList.add('active');
+                        cameraStatus.innerHTML = '<i class="fas fa-video"></i><span>Simulated Camera</span>';
+                        startMonitoringBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Monitoring';
+                        startDrowsinessDetection();
+                        monitoringActive = true;
+                        totalTrips++;
+                        
+                        addEvent('warning', '🎭 Running in simulation mode. Camera not required for demo.');
+                    }
+                }
+            } else {
+                stopMonitoring();
+            }
+        }
+        
+        // Start a new trip
+        async function startNewTrip() {
+            const res = await apiPOST("/trips/start", {
+                company_name: "DriveSafe Demo",
+                driver_name: "Demo Driver",
+                notes: "Live demo"
+            });
+
+            currentTripId = res.trip_id;
+            localStorage.setItem("drivesafe_trip_id", String(res.trip_id));
+            localStorage.setItem("drivesafe_company_id", String(res.company_id));
+            localStorage.setItem("drivesafe_driver_id", String(res.driver_id));
+
+            addEvent("success", `🆔 Trip started: ${currentTripId}`);
+        }
+        
+        // Stop monitoring
+        function stopMonitoring() {
+            if (stream) {
+                stream.getTracks().forEach(track => {
+                    track.stop();
+                });
+                stream = null;
+            }
+            
+            if (cameraFeed.srcObject) {
+                cameraFeed.srcObject = null;
+            }
+            
+            cameraOverlay.style.display = 'flex';
+            cameraOverlay.innerHTML = '<div style="text-align: center;"><i class="fas fa-video-slash fa-3x mb-3"></i><p>Click "Start Monitoring" to activate camera</p></div>';
+            
+            // Update status
+            cameraStatus.classList.remove('active');
+            cameraStatus.classList.add('inactive');
+            cameraStatus.innerHTML = '<i class="fas fa-video-slash"></i><span>Camera Off</span>';
+            
+            // Update button
+            startMonitoringBtn.innerHTML = '<i class="fas fa-play"></i> Start Monitoring';
+            
+            // Stop drowsiness detection
+            if (drowsinessDetectionInterval) {
+                clearInterval(drowsinessDetectionInterval);
+                drowsinessDetectionInterval = null;
+            }
+            
+            // Reset drowsiness indicator
+            drowsinessIndicator.classList.remove('alert');
+            drowsinessIndicator.innerHTML = '<i class="fas fa-eye"></i><span>Monitoring Drowsiness</span>';
+            
+            monitoringActive = false;
+            
+            addEvent('warning', '🛑 Camera monitoring stopped');
+            addEvent('info', '🤖 AI detection deactivated');
+            addEvent('info', `📊 Trip ${currentTripId} completed`);
+        }
+        
+        // Simulate drowsiness detection
+        function startDrowsinessDetection() {
+            // Simulate random drowsiness alerts
+            drowsinessDetectionInterval = setInterval(() => {
+                // Generate a random drowsy score between 0 and 100
+                drowsyScore = Math.floor(Math.random() * 100);
+                
+                // 20% chance of detecting drowsiness in each interval
+                if (Math.random() < 0.2) {
+                    // Show drowsiness alert
+                    drowsinessIndicator.classList.add('alert');
+                    drowsinessIndicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Drowsiness Detected!</span>';
+                    
+                    // Play alert sound
+                    playAlertSound();
+                    
+                    // Show notification
+                    showNotification('warning', 'Drowsiness Alert', 'Drowsiness detected! Please take a break.');
+                    
+                    // Send telemetry data to backend
+                    sendTelemetry();
+                    
+                    // Update counters
+                    alertsPrevented++;
+                    
+                    // Reset after 5 seconds
+                    setTimeout(() => {
+                        drowsinessIndicator.classList.remove('alert');
+                        drowsinessIndicator.innerHTML = '<i class="fas fa-eye"></i><span>Monitoring Drowsiness</span>';
+                    }, 5000);
+                }
+                
+                // Update risk meter with current drowsy score
+                updateRiskMeter();
+            }, 5000);
+        }
+        
+        // Test drowsiness alert
+        function testDrowsinessAlert() {
+            if (!monitoringActive) {
+                showNotification('error', 'Monitoring Not Active', 'Please start monitoring first.');
+                return;
+            }
+            
+            // Set high drowsy score for testing
+            drowsyScore = 85;
+            
+            // Show drowsiness alert
+            drowsinessIndicator.classList.add('alert');
+            drowsinessIndicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Drowsiness Detected!</span>';
+            
+            // Play alert sound
+            playAlertSound();
+            
+            // Show notification
+            showNotification('warning', 'Drowsiness Alert', 'Test drowsiness alert triggered!');
+            
+            // Send telemetry data to backend
+            sendTelemetry();
+            
+            // Update counters
+            alertsPrevented++;
+            
+            // Reset after 5 seconds
+            setTimeout(() => {
+                drowsinessIndicator.classList.remove('alert');
+                drowsinessIndicator.innerHTML = '<i class="fas fa-eye"></i><span>Monitoring Drowsiness</span>';
+                drowsyScore = 0;
+                updateRiskMeter();
+            }, 5000);
+        }
+        
+        // Send telemetry data to backend
+        async function sendTelemetry() {
+            if (!currentTripId) return;
+
+            await apiPOST("/telemetry", {
+                trip_id: Number(currentTripId),
+                lat: userLocation?.lat ?? null,
+                lng: userLocation?.lng ?? null,
+                drowsy_score: Number(drowsyScore),
+                zone_risk: Number(zoneRiskScore),
+                final_risk: Number(finalRiskScore)
+            });
+
+            addEvent("info", "📡 Telemetry sent to backend");
+        }
+        
+        // Play alert sound
+        function playAlertSound() {
+            // Create a simple beep using Web Audio API
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+            
+            // Repeat the beep 3 times
+            setTimeout(() => {
+                const osc2 = audioContext.createOscillator();
+                const gain2 = audioContext.createGain();
+                
+                osc2.connect(gain2);
+                gain2.connect(audioContext.destination);
+                
+                osc2.frequency.value = 800;
+                osc2.type = 'sine';
+                
+                gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                osc2.start(audioContext.currentTime);
+                osc2.stop(audioContext.currentTime + 0.5);
+            }, 600);
+            
+            setTimeout(() => {
+                const osc3 = audioContext.createOscillator();
+                const gain3 = audioContext.createGain();
+                
+                osc3.connect(gain3);
+                gain3.connect(audioContext.destination);
+                
+                osc3.frequency.value = 800;
+                osc3.type = 'sine';
+                
+                gain3.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain3.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                osc3.start(audioContext.currentTime);
+                osc3.stop(audioContext.currentTime + 0.5);
+            }, 1200);
+        }
+        
+        // Fleet Management Functions
+        function loadFleetData() {
+            loadDrivers();
+            loadRecentTrips();
+            updateFleetStats();
+            initializeFleetChart();
+        }
+        
+        function loadDrivers() {
+            // Generate mock drivers for demo
+            drivers = [
+                {
+                    id: 'driver-1',
+                    name: 'John Smith',
+                    license: 'DL123456',
+                    vehicle: 'Toyota Camry',
+                    phone: '+1234567890',
+                    department: 'logistics',
+                    active: true,
+                    total_trips: 42,
+                    avg_risk: 35,
+                    status: 'online'
+                },
+                {
+                    id: 'driver-2',
+                    name: 'Sarah Johnson',
+                    license: 'DL789012',
+                    vehicle: 'Honda Accord',
+                    phone: '+1234567891',
+                    department: 'delivery',
+                    active: true,
+                    total_trips: 38,
+                    avg_risk: 28,
+                    status: 'online'
+                },
+                {
+                    id: 'driver-3',
+                    name: 'Michael Brown',
+                    license: 'DL345678',
+                    vehicle: 'Ford F-150',
+                    phone: '+1234567892',
+                    department: 'transport',
+                    active: false,
+                    total_trips: 56,
+                    avg_risk: 42,
+                    status: 'offline'
+                },
+                {
+                    id: 'driver-4',
+                    name: 'Emily Davis',
+                    license: 'DL901234',
+                    vehicle: 'Nissan Altima',
+                    phone: '+1234567893',
+                    department: 'delivery',
+                    active: true,
+                    total_trips: 31,
+                    avg_risk: 25,
+                    status: 'online'
+                }
+            ];
+            
+            displayDrivers(drivers);
+        }
+        
+        function displayDrivers(driverList) {
+            const driverListContainer = document.getElementById('driver-list');
+            driverListContainer.innerHTML = '';
+            
+            driverList.forEach(driver => {
+                const driverItem = document.createElement('div');
+                driverItem.className = 'list-item';
+                driverItem.dataset.driverId = driver.id;
+                
+                driverItem.innerHTML = `
+                    <div class="list-item-header">
+                        <div class="list-item-name">${driver.name}</div>
+                        <div class="list-item-status ${driver.active ? 'status-active' : 'status-inactive'}">
+                            ${driver.active ? 'Active' : 'Inactive'}
+                        </div>
+                    </div>
+                    <div class="list-item-details">
+                        ${driver.vehicle} • ${driver.total_trips} trips • Avg risk: ${driver.avg_risk}
+                    </div>
+                `;
+                
+                driverItem.addEventListener('click', () => selectDriver(driver));
+                driverListContainer.appendChild(driverItem);
+            });
+            
+            updateFleetStats();
+        }
+        
+        function loadRecentTrips() {
+            // Generate mock trips for demo
+            trips = [
+                {
+                    id: 'trip-1',
+                    driver_id: 'driver-1',
+                    driver_name: 'John Smith',
+                    route: 'NYC to Boston',
+                    start_time: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+                    end_time: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+                    duration_minutes: 90,
+                    distance_km: 180,
+                    status: 'completed',
+                    purpose: 'delivery',
+                    risk_score: 45,
+                    avg_speed: 120
+                },
+                {
+                    id: 'trip-2',
+                    driver_id: 'driver-2',
+                    driver_name: 'Sarah Johnson',
+                    route: 'Boston to Philadelphia',
+                    start_time: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+                    end_time: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+                    duration_minutes: 180,
+                    distance_km: 320,
+                    status: 'completed',
+                    purpose: 'pickup',
+                    risk_score: 32,
+                    avg_speed: 106
+                },
+                {
+                    id: 'trip-3',
+                    driver_id: 'driver-3',
+                    driver_name: 'Michael Brown',
+                    route: 'Philadelphia to Washington DC',
+                    start_time: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+                    end_time: null,
+                    duration_minutes: null,
+                    distance_km: 200,
+                    status: 'in-progress',
+                    purpose: 'transport',
+                    risk_score: 68,
+                    avg_speed: 80
+                },
+                {
+                    id: 'trip-4',
+                    driver_id: 'driver-4',
+                    driver_name: 'Emily Davis',
+                    route: 'Local Delivery Route',
+                    start_time: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+                    end_time: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+                    duration_minutes: 135,
+                    distance_km: 85,
+                    status: 'completed',
+                    purpose: 'delivery',
+                    risk_score: 28,
+                    avg_speed: 37
+                }
+            ];
+            
+            displayTrips(trips);
+            updateFleetStats();
+        }
+        
+        function displayTrips(tripList) {
+            const tripListContainer = document.getElementById('trip-list');
+            tripListContainer.innerHTML = '';
+            
+            tripList.forEach(trip => {
+                const tripItem = document.createElement('div');
+                tripItem.className = 'list-item';
+                tripItem.dataset.tripId = trip.id;
+                
+                const startTime = new Date(trip.start_time);
+                const endTime = trip.end_time ? new Date(trip.end_time) : null;
+                
+                tripItem.innerHTML = `
+                    <div class="list-item-header">
+                        <div class="list-item-name">${trip.route}</div>
+                        <div class="list-item-status ${trip.status === 'completed' ? 'status-active' : 'status-inactive'}">
+                            ${trip.status}
+                        </div>
+                    </div>
+                    <div class="list-item-details">
+                        ${trip.driver_name} • ${trip.duration_minutes || 'Ongoing'} • Risk: ${trip.risk_score}
+                    </div>
+                `;
+                
+                tripItem.addEventListener('click', () => selectTrip(trip));
+                tripListContainer.appendChild(tripItem);
+            });
+        }
+        
+        function selectDriver(driver) {
+            // Update selected driver display
+            document.getElementById('selected-driver').textContent = driver.name;
+            currentDriverId = driver.id;
+            
+            // Highlight selected driver
+            document.querySelectorAll('#driver-list .list-item').forEach(item => {
+                item.style.background = '';
+            });
+            document.querySelector(`.list-item[data-driverId="${driver.id}"]`).style.background = 'rgba(255, 107, 53, 0.1)';
+            
+            // Filter trips for selected driver
+            const driverTrips = trips.filter(trip => trip.driver_id === driver.id);
+            displayTrips(driverTrips);
+            
+            // Update fleet chart
+            updateFleetChartForDriver(driver);
+        }
+        
+        function selectTrip(trip) {
+            // Highlight selected trip
+            document.querySelectorAll('#trip-list .list-item').forEach(item => {
+                item.style.background = '';
+            });
+            document.querySelector(`.list-item[data-tripId="${trip.id}"]`).style.background = 'rgba(255, 107, 53, 0.1)';
+            
+            // Update predictive alert
+            checkPredictiveAlertForTrip(trip);
+        }
+        
+        function updateFleetStats() {
+            const totalDrivers = drivers.length;
+            const activeDrivers = drivers.filter(d => d.active).length;
+            const totalTrips = trips.length;
+            const avgRisk = trips.length > 0 ? Math.round(trips.reduce((sum, t) => sum + t.risk_score, 0) / trips.length) : 0;
+            const highRiskTrips = trips.filter(t => t.risk_score > 60).length;
+            
+            document.getElementById('total-drivers').textContent = totalDrivers;
+            document.getElementById('active-drivers').textContent = activeDrivers;
+            document.getElementById('total-trips').textContent = totalTrips;
+            document.getElementById('fleet-avg-risk').textContent = avgRisk;
+            document.getElementById('high-risk-trips').textContent = highRiskTrips;
+        }
+        
+        function updateFleetChart() {
+            const ctx = document.getElementById('fleet-chart');
+            if (!ctx) return;
+            
+            // Destroy existing chart if it exists
+            if (charts.fleet) {
+                charts.fleet.destroy();
+            }
+            
+            charts.fleet = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Average Risk Score',
+                        data: [35, 42, 38, 45, 40, 33, 37],
+                        borderColor: '#ff6b35',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Completed Trips',
+                        data: [12, 15, 18, 14, 20, 16, 11],
+                        borderColor: '#27ae60',
+                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#a0a0a0'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#a0a0a0'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#a0a0a0'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateFleetChartForDriver(driver) {
+            if (!charts.fleet) return;
+            
+            // Update chart with driver-specific data
+            const driverTrips = trips.filter(t => t.driver_id === driver.id);
+            const riskData = driverTrips.map(t => t.risk_score);
+            
+            charts.fleet.data.datasets[0].data = riskData;
+            charts.fleet.update();
+        }
+        
+        function checkPredictiveAlertForTrip(trip) {
+            if (trip.risk_score > 70) {
+                predictiveAlert.style.display = 'flex';
+                predictiveMessage.textContent = `High risk detected for trip ${trip.route}. Please monitor closely.`;
+            } else {
+                predictiveAlert.style.display = 'none';
+            }
+        }
+        
+        // Modal functions
+        function showAddDriverModal() {
+            document.getElementById('add-driver-modal').classList.add('show');
+            populateDriverSelect();
+        }
+        
+        function showAddTripModal() {
+            document.getElementById('add-trip-modal').classList.add('show');
+            populateDriverSelect();
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+        
+        function populateDriverSelect() {
+            const select = document.getElementById('trip-driver');
+            select.innerHTML = '<option value="">Select driver</option>';
+            
+            drivers.forEach(driver => {
+                const option = document.createElement('option');
+                option.value = driver.id;
+                option.textContent = driver.name;
+                select.appendChild(option);
+            });
+        }
+        
+        function addNewDriver() {
+            const name = document.getElementById('driver-name').value;
+            const license = document.getElementById('driver-license').value;
+            const vehicle = document.getElementById('driver-vehicle').value;
+            const phone = document.getElementById('driver-phone').value;
+            const department = document.getElementById('driver-department').value;
+            
+            if (!name || !license || !vehicle) {
+                showNotification('error', 'Validation Error', 'Please fill in all required fields.');
+                return;
+            }
+            
+            const newDriver = {
+                id: 'driver-' + Date.now(),
+                name,
+                license,
+                vehicle,
+                phone,
+                department,
+                active: true,
+                total_trips: 0,
+                avg_risk: 0
+            };
+            
+            drivers.push(newDriver);
+            displayDrivers(drivers);
+            
+            closeModal('add-driver-modal');
+            addEvent('success', `✅ Driver ${name} added to fleet`);
+            showNotification('success', 'Driver Added', `${name} has been added to the fleet.`);
+            
+            // Clear form
+            document.getElementById('driver-name').value = '';
+            document.getElementById('driver-license').value = '';
+            document.getElementById('driver-vehicle').value = '';
+            document.getElementById('driver-phone').value = '';
+            document.getElementById('driver-department').value = '';
+        }
+        
+        function addNewTrip() {
+            const driverId = document.getElementById('trip-driver').value;
+            const route = document.getElementById('trip-route').value;
+            const duration = document.getElementById('trip-duration').value;
+            const distance = document.getElementById('trip-distance').value;
+            const purpose = document.getElementById('trip-purpose').value;
+            
+            if (!driverId || !route || !duration || !distance) {
+                showNotification('error', 'Validation Error', 'Please fill in all required fields.');
+                return;
+            }
+            
+            const driver = drivers.find(d => d.id === driverId);
+            const newTrip = {
+                id: 'trip-' + Date.now(),
+                driver_id: driverId,
+                driver_name: driver.name,
+                route,
+                start_time: new Date().toISOString(),
+                end_time: null,
+                duration_minutes: parseInt(duration),
+                distance_km: parseFloat(distance),
+                status: 'planned',
+                purpose,
+                risk_score: Math.floor(Math.random() * 100)
+            };
+            
+            trips.unshift(newTrip);
+            displayTrips(trips);
+            
+            closeModal('add-trip-modal');
+            addEvent('success', `✅ Trip to ${route} added for ${driver.name}`);
+            showNotification('success', 'Trip Added', `Trip to ${route} has been added for ${driver.name}.`);
+            
+            // Clear form
+            document.getElementById('trip-driver').value = '';
+            document.getElementById('trip-route').value = '';
+            document.getElementById('trip-duration').value = '';
+            document.getElementById('trip-distance').value = '';
+            document.getElementById('trip-purpose').value = '';
+        }
+        
+        function refreshFleetData() {
+            loadFleetData();
+            addEvent('info', '🔄 Fleet data refreshed');
+            showNotification('success', 'Data Refreshed', 'Fleet data has been refreshed with latest information.');
+        }
+        
+        function exportFleetData() {
+            // Generate CSV content
+            let csvContent = 'Driver Name,License,Vehicle,Phone,Department,Active,Trips,Avg Risk\n';
+            
+            drivers.forEach(driver => {
+                csvContent += `${driver.name},${driver.license},${driver.vehicle},${driver.phone},${driver.department},${driver.active},${driver.total_trips},${driver.avg_risk}\n`;
+            });
+            
+            csvContent += '\nTrip Route,Driver Name,Status,Duration (min),Distance (km),Risk Score\n';
+            
+            trips.forEach(trip => {
+                csvContent += `${trip.route},${trip.driver_name},${trip.status},${trip.duration_minutes || 'N/A'},${trip.distance_km},${trip.risk_score}\n`;
+            });
+            
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `fleet-data-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            
+            window.URL.revokeObjectURL(url);
+            addEvent('success', '📊 Fleet data exported successfully');
+            showNotification('success', 'Export Complete', 'Fleet data has been exported successfully.');
+        }
+        
+        function generateReport() {
+            const reportData = {
+                summary: {
+                    totalDrivers: drivers.length,
+                    activeDrivers: drivers.filter(d => d.active).length,
+                    totalTrips: trips.length,
+                    completedTrips: trips.filter(t => t.status === 'completed').length,
+                    avgRisk: Math.round(trips.reduce((sum, t) => sum + t.risk_score, 0) / trips.length),
+                    highRiskTrips: trips.filter(t => t.risk_score > 60).length,
+                    totalAlertsPrevented: alertsPrevented,
+                    systemUptime: Math.floor((Date.now() - systemStartTime) / 1000 / 60) + ' minutes'
+                },
+                topDrivers: drivers.sort((a, b) => a.total_trips - b.total_trips).slice(0, 5),
+                recentTrips: trips.slice(0, 10),
+                riskDistribution: {
+                    low: trips.filter(t => t.risk_score <= 30).length,
+                    medium: trips.filter(t => t.risk_score > 30 && t.risk_score <= 60).length,
+                    high: trips.filter(t => t.risk_score > 60 && t.risk_score <= 80).length,
+                    critical: trips.filter(t => t.risk_score > 80).length
+                }
+            };
+            
+            // Create and download report
+            const reportBlob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+            const reportUrl = window.URL.createObjectURL(reportBlob);
+            const reportLink = document.createElement('a');
+            reportLink.href = reportUrl;
+            reportLink.download = `fleet-report-${new Date().toISOString().split('T')[0]}.json`;
+            reportLink.click();
+            
+            window.URL.revokeObjectURL(reportUrl);
+            addEvent('success', '📊 Fleet report generated and downloaded');
+            showNotification('success', 'Report Generated', 'Fleet report has been generated and downloaded.');
+        }
+        
+        // Initialize Charts
+        function initializeCharts() {
+            // Initialize analytics charts
+            initializeAnalyticsCharts();
+        }
+        
+        function initializeAnalyticsCharts() {
+            // Daily risk chart
+            const dailyCtx = document.getElementById('daily-chart');
+            if (dailyCtx) {
+                charts.daily = new Chart(dailyCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            {
+                                label: 'Average Risk',
+                                data: [],
+                                borderColor: '#27ae60',
+                                backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Max Risk',
+                                data: [],
+                                borderColor: '#e74c3c',
+                                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                                tension: 0.4
+                            },
+                            {
+                                label: 'High Risk Events',
+                                data: [],
+                                borderColor: '#f39c12',
+                                backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                                tension: 0.4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#a0a0a0'
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#a0a0a0'
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#a0a0a0'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Trip analysis chart
+            const tripCtx = document.getElementById('trip-chart');
+            if (tripCtx) {
+                charts.trip = new Chart(tripCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            {
+                                label: 'Drowsy Score',
+                                data: [],
+                                borderColor: '#e74c3c',
+                                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Zone Risk',
+                                data: [],
+                                borderColor: '#f39c12',
+                                backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Final Risk',
+                                data: [],
+                                borderColor: '#3498db',
+                                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                                tension: 0.4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#a0a0a0'
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#a0a0a0'
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#a0a0a0'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Load dashboard data
+        function loadDashboardData() {
+            // Generate data for the last 14 days
+            const labels = [];
+            const avgRiskData = [];
+            const maxRiskData = [];
+            const highRiskEventsData = [];
+            
+            for (let i = 13; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                
+                avgRiskData.push(Math.floor(Math.random() * 40) + 20);
+                maxRiskData.push(Math.floor(Math.random() * 30) + 60);
+                highRiskEventsData.push(Math.floor(Math.random() * 10));
+            }
+            
+            // Update daily chart
+            if (charts.daily) {
+                charts.daily.data.labels = labels;
+                charts.daily.data.datasets[0].data = avgRiskData;
+                charts.daily.data.datasets[1].data = maxRiskData;
+                charts.daily.data.datasets[2].data = highRiskEventsData;
+                charts.daily.update();
+            }
+            
+            // Generate trip data
+            const tripLabels = [];
+            const drowsyData = [];
+            const zoneData = [];
+            const finalData = [];
+            
+            for (let i = 0; i < 20; i++) {
+                tripLabels.push(`${i * 5} min`);
+                drowsyData.push(Math.floor(Math.random() * 50));
+                zoneData.push(Math.floor(Math.random() * 60) + 20);
+                finalData.push(Math.floor(Math.random() * 40) + 30);
+            }
+            
+            // Update trip chart
+            if (charts.trip) {
+                charts.trip.data.labels = tripLabels;
+                charts.trip.data.datasets[0].data = drowsyData;
+                charts.trip.data.datasets[1].data = zoneData;
+                charts.trip.data.datasets[2].data = finalData;
+                charts.trip.update();
+            }
+        }
+        
+        // Refresh dashboard
+        function refreshDashboard() {
+            loadDashboardData();
+            addEvent('info', '📊 Analytics data refreshed');
+            showNotification('success', 'Dashboard Refreshed', 'Analytics data has been updated.');
+        }
+        
+        // Initialize fleet chart
+        function initializeFleetChart() {
+            const ctx = document.getElementById('fleet-chart');
+            if (!ctx) return;
+            
+            charts.fleet = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Average Risk Score',
+                        data: [35, 42, 38, 45, 40, 33, 37],
+                        borderColor: '#ff6b35',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Completed Trips',
+                        data: [12, 15, 18, 14, 20, 16, 11],
+                        borderColor: '#27ae60',
+                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#a0a0a0'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#a0a0a0'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#a0a0a0'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Show notification
+        function showNotification(type, title, message) {
+            const notification = document.getElementById('notification');
+            const notificationTitle = document.getElementById('notification-title');
+            const notificationMessage = document.getElementById('notification-message');
+            
+            notification.className = `notification ${type}`;
+            
+            // Set icon based on type
+            const iconClass = type === 'success' ? 'fa-check-circle' : 
+                            type === 'error' ? 'fa-exclamation-circle' : 
+                            type === 'warning' ? 'fa-exclamation-triangle' : 
+                            'fa-info-circle';
+            
+            notification.querySelector('.notification-icon').className = `notification-icon fas ${iconClass}`;
+            
+            notificationTitle.textContent = title;
+            notificationMessage.textContent = message;
+            
+            // Show notification
+            notification.classList.add('show');
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
