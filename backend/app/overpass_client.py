@@ -44,8 +44,12 @@ async def overpass_post(query: str) -> Dict[str, Any]:
     async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
         r = await client.post(
             OVERPASS_URL,
-            headers={"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"},
             data={"data": query},
+            headers={
+                "User-Agent": "DriveSafe-AI",
+                "Accept": "application/json"
+            }
         )
+
         r.raise_for_status()
         return r.json()
