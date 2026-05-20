@@ -8,41 +8,40 @@ DriveSafe-AI is an end-to-end intelligent driver safety platform that combines r
 ✨ Key Features
 👁️ Driver Drowsiness Detection
 
->Real-time face monitoring using MediaPipe Face Mesh
->Eye Aspect Ratio (EAR) based blink and drowsiness detection
->Instant audible alerts (beep) on drowsy condition
->Floating camera monitoring mode
+Real-time face monitoring using MediaPipe Face Mesh
+Eye Aspect Ratio (EAR) based blink and drowsiness detection
+Instant audible alerts (beep) on drowsy condition
+Floating camera monitoring mode
 
 
 🧠 Risk Intelligence Engine
 
->Combines driver state + road environment risk
->Weighted risk scoring model
->Real-time safety level classification (Safe → Critical)
+Combines driver state + road environment risk
+Weighted risk scoring model
+Real-time safety level classification (Safe → Critical)
 
 
 🗺️ Geospatial Risk Analysis
 
->Road risk evaluation using OpenStreetMap data
->Intersection, crossing, and signal analysis
->Dynamic risk heatmap generation
->Nearby emergency services detection
+Road risk evaluation using OpenStreetMap data
+Intersection, crossing, and signal analysis
+Dynamic risk heatmap generation
+Nearby emergency services detection
 
 
 📊 Live Dashboard
 
->Real-time risk meter
->Driver event log
->Heatmap visualization
->Trip lifecycle monitoring
-
+Real-time risk meter
+Driver event log
+Heatmap visualization
+Trip lifecycle monitoring
 
 🔗 Telemetry & Event Pipeline
 
->Trip start/stop tracking
->Event streaming to backend
->Async FastAPI services
->Scalable REST architecture
+Trip start/stop tracking
+Event streaming to backend
+Async FastAPI services
+Scalable REST architecture
 
 
 🏗️ System Architecture
@@ -50,12 +49,11 @@ Camera → Frontend (JS) → FastAPI Backend → Risk Engine → Dashboard
 
 Flow:
 
->Camera captures driver face
->EAR algorithm detects drowsiness
->Frontend sends telemetry events
->Backend computes risk
->Dashboard updates in real time
-
+Camera captures driver face
+EAR algorithm detects drowsiness
+Frontend sends telemetry events
+Backend computes risk
+Dashboard updates in real time
 
 🧪 Live vs Demo Components
 Component	Status
