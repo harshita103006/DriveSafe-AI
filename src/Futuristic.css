@@ -1,0 +1,125 @@
+body {
+  margin: 0;
+  background: #040814;
+  overflow-x: hidden;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.cyber-bg {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(0,255,255,.12), transparent 40%),
+    linear-gradient(to bottom, #040814, #02040f);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,255,255,.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,255,.08) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: .2;
+}
+
+.hero-title {
+  font-size: clamp(3rem, 10vw, 7rem);
+  font-weight: 900;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.hero-title span {
+  color: #00e5ff;
+  text-shadow: 0 0 25px #00e5ff;
+}
+
+.cyber-card {
+  background: rgba(10,20,40,.55);
+  border: 1px solid rgba(0,255,255,.15);
+  backdrop-filter: blur(16px);
+  border-radius: 24px;
+  box-shadow:
+    0 0 30px rgba(0,255,255,.15),
+    inset 0 0 30px rgba(255,255,255,.03);
+  position: relative;
+}
+
+.cyber-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  padding: 1px;
+  background: linear-gradient(135deg,#00e5ff,#ff7b00);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+}
+
+.cyber-btn {
+  background: linear-gradient(90deg,#ff7b00,#ff2d55);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: .3s;
+  box-shadow: 0 0 25px rgba(255,120,0,.45);
+}
+
+.cyber-btn:hover {
+  transform: translateY(-3px) scale(1.03);
+}
+
+.status-active {
+  color: #00ffb3;
+  text-shadow: 0 0 12px #00ffb3;
+}
+
+.status-danger {
+  color: #ff4444;
+  text-shadow: 0 0 12px #ff4444;
+}
+
+.hud-line {
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  background: rgba(0,255,255,.3);
+  top: 50%;
+  animation: scan 3s linear infinite;
+}
+
+@keyframes scan {
+  from { transform: translateY(-200px); }
+  to { transform: translateY(200px); }
+}
+
+.alert-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255,0,0,.15);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 4rem;
+  font-weight: 900;
+  color: white;
+  animation: pulse 1s infinite;
+  z-index: 999;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: .4;
+  }
+}

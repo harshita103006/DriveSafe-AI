@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import { startTrip, endTrip, postEvent } from "./api";
-
+import "./Futuristic.css";
 const EYE_THRESHOLD = 0.012;
 const SLEEP_FRAMES = 10;
 const ALARM_FRAMES = 60;
@@ -160,19 +160,22 @@ const stopMonitoring = async () => {
   }, []);
 
   return (
-    <div style={app}>
+    <div className="cyber-bg">
 
       <div style={hero}>
-        <h1>DRIVESAFE <span style={{color:"#22ffb1"}}>AI</span></h1>
+        <h1 className="hero-title">
+         DriveSafe-<span>AI</span>
+        </h1>
         <p>Cyber Vision For Driver Safety</p>
       </div>
 
-      <div style={{
+      <div className="cyber-card" style={{
         ...cameraCard,
         boxShadow: sleeping
           ? "0 0 60px #ff2d2d"
           : "0 0 40px #22ffb1"
       }}>
+        <div className="hud-line"></div>
         <video ref={videoRef} autoPlay muted playsInline style={video}/>
       </div>
 
@@ -182,18 +185,18 @@ const stopMonitoring = async () => {
 
       <div style={{display:"flex",gap:16}}>
         {!monitoring ? (
-          <button style={btn} onClick={startMonitoring}>START MONITORING</button>
+          <button className="cyber-btn" onClick={startMonitoring}>START MONITORING</button>
         ) : (
-          <button style={btn} onClick={stopMonitoring}>STOP MONITORING</button>
+          <button className="cyber-btn" onClick={stopMonitoring}>STOP MONITORING</button>
         )}
 
-        <button style={btn} onClick={togglePiP}>
+        <button className="cyber-btn" onClick={togglePiP}>
           {pipOn ? "EXIT FLOAT" : "FLOAT MODE"}
         </button>
       </div>
 
       {alarmOn && (
-        <div style={alertOverlay}>
+        <div className="alert-overlay">
           ⚠ WAKE UP DRIVER ⚠
         </div>
       )}

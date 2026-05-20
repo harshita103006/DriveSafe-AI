@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DriveSafe-AI — Vehicle Intelligence Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --orange: #FF6B00;
+  --orange-glow: #FF8C00;
+  --orange-dim: rgba(255,107,0,0.15);
+  --cyan: #00D4FF;
+  --cyan-glow: #00FFFF;
+  --cyan-dim: rgba(0,212,255,0.12);
+  --red-alert: #FF2244;
+  --green-safe: #00FF88;
+  --bg: #040608;
+  --bg2: #070A0F;
+  --bg3: #0A0E16;
+  --panel: rgba(10,15,25,0.92);
+  --panel-border: rgba(0,212,255,0.18);
+  --panel-border-orange: rgba(255,107,0,0.25);
+  --text: #E8EFF8;
+  --text-dim: rgba(232,239,248,0.55);
+  --font-hud: 'Orbitron', monospace;
+  --font-body: 'Rajdhani', sans-serif;
+  --font-mono: 'Share Tech Mono', monospace;
+  --sidebar-w: 220px;
+  --sidebar-collapsed: 64px;
+  --transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-body);overflow:hidden}
+/* ---- SCROLLBARS ---- */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--orange);border-radius:2px}
+
+/* ---- LAYOUT ---- */
+#app{display:flex;height:100vh;overflow:hidden}
+
+/* ---- SIDEBAR ---- */
+#sidebar{
+  width:var(--sidebar-w);min-width:var(--sidebar-w);
+  background:rgba(4,6,10,0.97);
+  border-right:1px solid var(--panel-border);
+  display:flex;flex-direction:column;
+  transition:var(--transition);
+  z-index:100;position:relative;
+  backdrop-filter:blur(20px);
+}
+#sidebar.collapsed{width:var(--sidebar-collapsed);min-width:var(--sidebar-collapsed)}
+.sidebar-logo{
+  padding:20px 18px 16px;
+  border-bottom:1px solid var(--panel-border);
+  display:flex;align-items:center;gap:12px;
+  min-height:70px;
+}
+.logo-icon{
+  width:36px;height:36px;min-width:36px;
+  background:linear-gradient(135deg,var(--orange),var(--orange-glow));
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-hud);font-size:14px;font-weight:900;color:#000;
+  box-shadow:0 0 18px var(--orange-dim);
+}
+.logo-text{font-family:var(--font-hud);font-size:13px;font-weight:700;color:var(--orange);letter-spacing:1px;white-space:nowrap}
+.logo-sub{font-size:10px;color:var(--text-dim);font-family:var(--font-mono);letter-spacing:2px;white-space:nowrap}
+.sidebar-toggle{
+  position:absolute;right:-12px;top:50%;transform:translateY(-50%);
+  width:24px;height:24px;border-radius:50%;
+  background:var(--orange);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 12px var(--orange-dim);z-index:10;
+  transition:var(--transition);
+}
+.sidebar-toggle:hover{background:var(--orange-glow);box-shadow:0 0 20px rgba(255,107,0,0.5)}
+.sidebar-toggle svg{width:12px;height:12px;fill:#000;transition:var(--transition)}
+#sidebar.collapsed .sidebar-toggle svg{transform:rotate(180deg)}
+.nav-section{padding:12px 0;flex:1;overflow-y:auto;overflow-x:hidden}
+.nav-label{
+  font-family:var(--font-mono);font-size:9px;color:var(--text-dim);
+  letter-spacing:3px;padding:8px 18px 4px;white-space:nowrap;
+  transition:var(--transition);
+}
+#sidebar.collapsed .nav-label{opacity:0;padding:4px}
+.nav-item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 18px;cursor:pointer;
+  transition:var(--transition);position:relative;
+  white-space:nowrap;overflow:hidden;
+  border-left:3px solid transparent;
+  font-size:14px;font-weight:500;letter-spacing:0.5px;
+}
+.nav-item:hover{background:var(--cyan-dim);border-left-color:var(--cyan);color:var(--cyan)}
+.nav-item.active{background:var(--orange-dim);border-left-color:var(--orange);color:var(--orange)}
+.nav-item.active .nav-dot{background:var(--orange);box-shadow:0 0 8px var(--orange)}
+.nav-item:hover .nav-dot{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+.nav-icon{width:20px;min-width:20px;height:20px;display:flex;align-items:center;justify-content:center}
+.nav-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-text{transition:var(--transition)}
+#sidebar.collapsed .nav-text{opacity:0;width:0}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.2);min-width:6px;margin-left:auto;transition:var(--transition)}
+#sidebar.collapsed .nav-dot{display:none}
+.nav-badge{
+  background:var(--red-alert);color:#fff;font-size:9px;font-weight:700;
+  padding:2px 5px;border-radius:10px;font-family:var(--font-mono);
+  animation:pulse-badge 1.5s infinite;
+}
+#sidebar.collapsed .nav-badge{display:none}
+@keyframes pulse-badge{0%,100%{box-shadow:0 0 0 0 rgba(255,34,68,0.4)}50%{box-shadow:0 0 0 4px rgba(255,34,68,0)}}
+.sidebar-status{
+  padding:14px 18px;border-top:1px solid var(--panel-border);
+  font-family:var(--font-mono);font-size:10px;
+}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green-safe);display:inline-block;margin-right:8px;box-shadow:0 0 6px var(--green-safe);animation:blink 2s infinite}
+#sidebar.collapsed .status-text{display:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* ---- MAIN CONTENT ---- */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+
+/* ---- TOPBAR ---- */
+#topbar{
+  height:56px;min-height:56px;
+  background:rgba(4,6,10,0.92);
+  border-bottom:1px solid var(--panel-border);
+  display:flex;align-items:center;padding:0 24px;gap:20px;
+  backdrop-filter:blur(20px);z-index:50;
+}
+.topbar-breadcrumb{font-family:var(--font-hud);font-size:11px;color:var(--text-dim);letter-spacing:2px}
+.topbar-breadcrumb span{color:var(--orange)}
+.topbar-spacer{flex:1}
+.topbar-time{font-family:var(--font-mono);font-size:13px;color:var(--cyan)}
+.topbar-chip{
+  background:var(--orange-dim);border:1px solid var(--panel-border-orange);
+  border-radius:4px;padding:4px 10px;font-family:var(--font-mono);font-size:10px;
+  color:var(--orange);letter-spacing:1px;cursor:pointer;transition:var(--transition);
+}
+.topbar-chip:hover{background:rgba(255,107,0,0.25);box-shadow:0 0 10px var(--orange-dim)}
+.topbar-chip.danger{background:rgba(255,34,68,0.12);border-color:rgba(255,34,68,0.3);color:var(--red-alert);animation:pulse-badge 1.5s infinite}
+
+/* ---- PAGE CONTAINER ---- */
+#page-container{flex:1;overflow:hidden;position:relative}
+.page{
+  position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+  padding:28px;
+  animation:pageIn 0.4s ease-out forwards;
+}
+.page.out{animation:pageOut 0.25s ease-in forwards}
+@keyframes pageIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes pageOut{from{opacity:1}to{opacity:0}}
+
+/* ---- COMMON COMPONENTS ---- */
+.page-title{
+  font-family:var(--font-hud);font-size:20px;font-weight:700;
+  color:var(--orange);letter-spacing:2px;margin-bottom:6px;
+}
+.page-subtitle{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);letter-spacing:2px;margin-bottom:24px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.panel{
+  background:var(--panel);
+  border:1px solid var(--panel-border);
+  border-radius:10px;padding:18px;
+  position:relative;overflow:hidden;
+  transition:var(--transition);
+}
+.panel::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+  opacity:0.4;
+}
+.panel:hover{border-color:rgba(0,212,255,0.35);box-shadow:0 0 30px rgba(0,212,255,0.06)}
+.panel.orange::before{background:linear-gradient(90deg,transparent,var(--orange),transparent)}
+.panel.orange{border-color:var(--panel-border-orange)}
+.panel.orange:hover{border-color:rgba(255,107,0,0.4);box-shadow:0 0 30px rgba(255,107,0,0.06)}
+.panel.danger{border-color:rgba(255,34,68,0.3)}
+.panel.danger::before{background:linear-gradient(90deg,transparent,var(--red-alert),transparent)}
+.panel.success{border-color:rgba(0,255,136,0.25)}
+.panel.success::before{background:linear-gradient(90deg,transparent,var(--green-safe),transparent)}
+.panel-title{
+  font-family:var(--font-hud);font-size:11px;font-weight:600;
+  color:var(--text-dim);letter-spacing:2px;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.panel-title .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);flex-shrink:0}
+.panel-title .dot.orange{background:var(--orange);box-shadow:0 0 6px var(--orange)}
+.panel-title .dot.red{background:var(--red-alert);box-shadow:0 0 6px var(--red-alert);animation:blink 1s infinite}
+.panel-title .dot.green{background:var(--green-safe);box-shadow:0 0 6px var(--green-safe)}
+
+.metric-big{
+  font-family:var(--font-hud);font-size:32px;font-weight:700;
+  color:var(--orange);line-height:1;
+}
+.metric-big.cyan{color:var(--cyan)}
+.metric-big.green{color:var(--green-safe)}
+.metric-big.red{color:var(--red-alert)}
+.metric-label{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);letter-spacing:2px;margin-top:4px}
+.metric-change{font-family:var(--font-mono);font-size:11px;margin-top:4px}
+.metric-change.up{color:var(--green-safe)}
+.metric-change.down{color:var(--red-alert)}
+
+/* STAT BAR */
+.stat-bar{height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-top:8px}
+.stat-bar-fill{height:100%;border-radius:2px;transition:width 1s ease-out}
+.stat-bar-fill.orange{background:linear-gradient(90deg,var(--orange),var(--orange-glow));box-shadow:0 0 8px var(--orange)}
+.stat-bar-fill.cyan{background:linear-gradient(90deg,var(--cyan),var(--cyan-glow));box-shadow:0 0 8px var(--cyan)}
+.stat-bar-fill.green{background:linear-gradient(90deg,#00FF88,#00CC66);box-shadow:0 0 8px var(--green-safe)}
+.stat-bar-fill.red{background:linear-gradient(90deg,#FF2244,#FF4466);box-shadow:0 0 8px var(--red-alert)}
+
+/* BUTTONS */
+.btn{
+  font-family:var(--font-hud);font-size:11px;font-weight:600;
+  letter-spacing:2px;padding:10px 20px;border:none;border-radius:6px;
+  cursor:pointer;transition:var(--transition);display:inline-flex;align-items:center;gap:8px;
+  text-transform:uppercase;
+}
+.btn-primary{background:linear-gradient(135deg,var(--orange),var(--orange-glow));color:#000;box-shadow:0 0 20px rgba(255,107,0,0.3)}
+.btn-primary:hover{box-shadow:0 0 30px rgba(255,107,0,0.5);transform:translateY(-1px)}
+.btn-secondary{background:transparent;color:var(--cyan);border:1px solid rgba(0,212,255,0.4)}
+.btn-secondary:hover{background:var(--cyan-dim);box-shadow:0 0 15px rgba(0,212,255,0.2)}
+.btn-danger{background:linear-gradient(135deg,#FF2244,#FF4466);color:#fff;box-shadow:0 0 20px rgba(255,34,68,0.3);animation:danger-pulse 2s infinite}
+.btn-danger:hover{box-shadow:0 0 35px rgba(255,34,68,0.6)}
+@keyframes danger-pulse{0%,100%{box-shadow:0 0 20px rgba(255,34,68,0.3)}50%{box-shadow:0 0 35px rgba(255,34,68,0.5)}}
+
+/* GAUGE */
+.gauge-wrap{position:relative;display:flex;flex-direction:column;align-items:center}
+.gauge-svg{overflow:visible}
+.gauge-value{font-family:var(--font-hud);font-size:24px;font-weight:700;fill:var(--orange)}
+.gauge-unit{font-family:var(--font-mono);font-size:10px;fill:var(--text-dim)}
+
+/* CHART CANVAS */
+.chart-wrap{position:relative;height:160px}
+canvas.chart{width:100%!important;height:100%!important}
+
+/* HEATMAP GRID */
+.heatmap-grid{display:grid;grid-template-columns:repeat(20,1fr);gap:2px;padding:10px}
+.heatmap-cell{aspect-ratio:1;border-radius:2px;transition:transform 0.2s}
+.heatmap-cell:hover{transform:scale(1.4);z-index:10}
+
+/* PROGRESS RING */
+.ring-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center}
+.ring-text{position:absolute;text-align:center}
+
+/* TAGS */
+.tag{
+  display:inline-block;font-family:var(--font-mono);font-size:10px;
+  padding:3px 8px;border-radius:3px;letter-spacing:1px;
+}
+.tag.ok{background:rgba(0,255,136,0.1);color:var(--green-safe);border:1px solid rgba(0,255,136,0.2)}
+.tag.warn{background:rgba(255,107,0,0.1);color:var(--orange);border:1px solid rgba(255,107,0,0.2)}
+.tag.danger{background:rgba(255,34,68,0.1);color:var(--red-alert);border:1px solid rgba(255,34,68,0.2)}
+.tag.info{background:var(--cyan-dim);color:var(--cyan);border:1px solid rgba(0,212,255,0.2)}
+
+/* TABLE */
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{
+  font-family:var(--font-hud);font-size:9px;letter-spacing:2px;
+  color:var(--text-dim);padding:8px 12px;text-align:left;
+  border-bottom:1px solid var(--panel-border);
+}
+.data-table td{
+  padding:10px 12px;border-bottom:1px solid rgba(0,212,255,0.06);
+  font-family:var(--font-body);color:var(--text-dim);
+}
+.data-table tr:hover td{background:rgba(0,212,255,0.04);color:var(--text)}
+
+/* SCAN LINE ANIM */
+.scanline{
+  position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
+  animation:scanline-move 4s linear infinite;
+}
+@keyframes scanline-move{0%{background-position:0 0}100%{background-position:0 40px}}
+
+/* RADAR */
+.radar-wrap{position:relative;display:inline-flex}
+.radar-sweep{
+  position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(rgba(0,212,255,0.4),transparent 30%,transparent);
+  animation:radar-spin 3s linear infinite;
+}
+@keyframes radar-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* LOADING */
+.loading-dots{display:inline-flex;gap:4px}
+.loading-dots span{width:6px;height:6px;border-radius:50%;background:var(--orange);animation:loading 1.2s infinite}
+.loading-dots span:nth-child(2){animation-delay:0.2s}
+.loading-dots span:nth-child(3){animation-delay:0.4s}
+@keyframes loading{0%,80%,100%{opacity:0.2;transform:scale(0.8)}40%{opacity:1;transform:scale(1)}}
+
+/* LIVE FEED */
+.live-feed{max-height:180px;overflow-y:auto}
+.feed-item{
+  display:flex;gap:10px;padding:8px 0;
+  border-bottom:1px solid rgba(0,212,255,0.06);
+  font-family:var(--font-mono);font-size:11px;align-items:flex-start;
+}
+.feed-time{color:var(--cyan);min-width:60px;flex-shrink:0}
+.feed-msg{color:var(--text-dim)}
+.feed-msg.alert{color:var(--red-alert)}
+.feed-msg.ok{color:var(--green-safe)}
+.feed-msg.warn{color:var(--orange)}
+
+/* EMERGENCY */
+.emergency-sos{
+  border:2px solid var(--red-alert);
+  background:rgba(255,34,68,0.06);
+  border-radius:12px;padding:28px;text-align:center;
+  box-shadow:0 0 40px rgba(255,34,68,0.15),inset 0 0 40px rgba(255,34,68,0.04);
+  animation:sos-pulse 2s infinite;
+}
+@keyframes sos-pulse{0%,100%{box-shadow:0 0 40px rgba(255,34,68,0.15)}50%{box-shadow:0 0 60px rgba(255,34,68,0.35)}}
+.sos-btn{
+  width:100px;height:100px;border-radius:50%;border:3px solid var(--red-alert);
+  background:radial-gradient(circle,rgba(255,34,68,0.3),rgba(255,34,68,0.1));
+  color:var(--red-alert);font-family:var(--font-hud);font-size:16px;font-weight:900;
+  cursor:pointer;letter-spacing:3px;transition:var(--transition);
+  box-shadow:0 0 30px rgba(255,34,68,0.4),inset 0 0 20px rgba(255,34,68,0.1);
+  animation:sos-ring 2s infinite;
+}
+.sos-btn:hover{transform:scale(1.08);box-shadow:0 0 50px rgba(255,34,68,0.7)}
+@keyframes sos-ring{0%,100%{box-shadow:0 0 30px rgba(255,34,68,0.4),0 0 0 0 rgba(255,34,68,0.4)}50%{box-shadow:0 0 50px rgba(255,34,68,0.6),0 0 0 20px rgba(255,34,68,0)}}
+
+/* NOTIFICATION BADGE */
+.notif{
+  position:fixed;top:20px;right:20px;z-index:9999;
+  background:rgba(4,6,10,0.96);border:1px solid var(--panel-border-orange);
+  border-radius:8px;padding:14px 18px;min-width:280px;
+  font-family:var(--font-body);font-size:13px;
+  animation:notif-in 0.3s ease-out;
+  box-shadow:0 0 30px rgba(0,0,0,0.8);
+}
+@keyframes notif-in{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+.notif-title{font-family:var(--font-hud);font-size:11px;color:var(--orange);letter-spacing:1px;margin-bottom:4px}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  #sidebar{position:fixed;left:-300px;top:0;bottom:0;transition:var(--transition);z-index:200}
+  #sidebar.mobile-open{left:0;width:240px}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .page{padding:16px}
+}
+
+/* ===== LANDING PAGE ===== */
+#landing{
+  position:absolute;inset:0;overflow-y:auto;
+  background:radial-gradient(ellipse at 20% 0%,rgba(255,107,0,0.12) 0%,transparent 50%),
+             radial-gradient(ellipse at 80% 100%,rgba(0,212,255,0.1) 0%,transparent 50%),
+             var(--bg);
+}
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:80px 40px;position:relative;overflow:hidden}
+.hero-grid{
+  position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,212,255,0.05) 1px,transparent 1px);
+  background-size:60px 60px;
+  animation:grid-move 20s linear infinite;
+}
+@keyframes grid-move{from{background-position:0 0}to{background-position:0 60px}}
+.hero-particles{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.particle{
+  position:absolute;width:2px;height:2px;border-radius:50%;
+  background:var(--cyan);box-shadow:0 0 4px var(--cyan);
+  animation:float-particle linear infinite;
+}
+@keyframes float-particle{0%{transform:translateY(100vh) translateX(0) scale(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-100px) translateX(30px) scale(1);opacity:0}}
+.hero-badge{
+  font-family:var(--font-mono);font-size:10px;letter-spacing:4px;
+  color:var(--cyan);border:1px solid rgba(0,212,255,0.3);
+  padding:6px 16px;border-radius:20px;margin-bottom:28px;
+  animation:glow-pulse 3s infinite;display:inline-block;
+}
+@keyframes glow-pulse{0%,100%{box-shadow:0 0 10px rgba(0,212,255,0.2)}50%{box-shadow:0 0 25px rgba(0,212,255,0.4)}}
+.hero-title{
+  font-family:var(--font-hud);font-size:clamp(32px,6.5vw,84px);
+  font-weight:900;line-height:1.05;letter-spacing:0.04em;
+  white-space:nowrap;margin-bottom:12px;
+  display:flex;align-items:baseline;justify-content:center;gap:0.06em;
+}
+.hero-title-drive{
+  background:linear-gradient(175deg,#fff 0%,var(--orange) 55%,var(--orange-glow) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero-title-sep{
+  color:rgba(255,255,255,0.18);font-weight:300;
+  -webkit-text-fill-color:rgba(255,255,255,0.18);
+  font-size:0.75em;letter-spacing:0;align-self:center;
+}
+.hero-title-ai{
+  background:linear-gradient(175deg,var(--cyan-glow) 0%,var(--cyan) 60%,rgba(0,180,220,0.85) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  text-shadow:none;
+  position:relative;
+}
+.hero-title-ai::after{
+  content:'AI';
+  position:absolute;inset:0;
+  background:inherit;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:blur(14px);opacity:0.55;
+  pointer-events:none;
+}
+@media(max-width:600px){
+  .hero-title{white-space:normal;gap:0.04em;font-size:clamp(28px,9vw,52px)}
+}
+.hero-sub{font-size:16px;color:var(--text-dim);max-width:540px;margin:16px auto 40px;line-height:1.6;font-family:var(--font-body)}
+.hero-btns{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-bottom:60px}
+.hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;max-width:800px;margin:0 auto}
+.hero-stat{text-align:center}
+.hero-stat-val{font-family:var(--font-hud);font-size:28px;font-weight:700;color:var(--orange);display:block}
+.hero-stat-lbl{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);letter-spacing:2px}
+.hero-car-container{position:absolute;right:5%;top:50%;transform:translateY(-50%);opacity:0.18;pointer-events:none;display:none}
+@media(min-width:1200px){.hero-car-container{display:block}}
+
+.landing-section{padding:80px 60px;max-width:1200px;margin:0 auto}
+.landing-section-title{font-family:var(--font-hud);font-size:24px;color:var(--text);margin-bottom:8px;letter-spacing:2px}
+.landing-section-sub{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);letter-spacing:3px;margin-bottom:48px}
+.feature-card{
+  background:rgba(10,15,25,0.8);border:1px solid var(--panel-border);
+  border-radius:12px;padding:28px;transition:var(--transition);cursor:default;
+}
+.feature-card:hover{border-color:var(--orange);background:rgba(10,15,25,0.95);transform:translateY(-4px);box-shadow:0 20px 40px rgba(0,0,0,0.4)}
+.feature-icon{font-size:28px;margin-bottom:16px;display:block;filter:drop-shadow(0 0 8px currentColor)}
+.feature-title{font-family:var(--font-hud);font-size:14px;color:var(--orange);margin-bottom:10px;letter-spacing:1px}
+.feature-desc{font-size:13px;color:var(--text-dim);line-height:1.6}
+
+.landing-footer{
+  padding:40px 60px;text-align:center;
+  border-top:1px solid var(--panel-border);
+  font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
+}
+
+/* ===== CANVAS 3D SCENE ===== */
+#canvas-3d{position:absolute;inset:0;pointer-events:none;z-index:0}
+
+/* ALERT BANNER */
+.alert-banner{
+  position:fixed;bottom:0;left:0;right:0;z-index:1000;
+  background:rgba(255,34,68,0.15);border-top:2px solid var(--red-alert);
+  padding:12px 28px;display:flex;align-items:center;gap:16px;
+  font-family:var(--font-hud);font-size:12px;color:var(--red-alert);letter-spacing:2px;
+  animation:alert-in 0.3s ease-out;display:none;
+}
+.alert-banner.visible{display:flex}
+@keyframes alert-in{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+
+/* MAP PLACEHOLDER */
+.map-frame{
+  background:rgba(0,0,0,0.5);border:1px solid var(--panel-border);border-radius:8px;
+  min-height:320px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);color:var(--text-dim);font-size:12px;
+  position:relative;overflow:hidden;
+}
+.map-grid{
+  position:absolute;inset:0;
+  background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);
+  background-size:30px 30px;
+}
+.map-marker{
+  position:absolute;width:12px;height:12px;border-radius:50%;
+  transform:translate(-50%,-50%);
+}
+.map-marker.red{background:var(--red-alert);box-shadow:0 0 12px var(--red-alert);animation:blink 1s infinite}
+.map-marker.orange{background:var(--orange);box-shadow:0 0 12px var(--orange)}
+.map-marker.cyan{background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+.map-ping{
+  position:absolute;width:40px;height:40px;border-radius:50%;border:2px solid var(--cyan);
+  transform:translate(-50%,-50%);animation:map-ping 2s infinite;
+}
+@keyframes map-ping{0%{transform:translate(-50%,-50%) scale(0.4);opacity:1}100%{transform:translate(-50%,-50%) scale(2);opacity:0}}
+
+/* VEHICLE TELEMETRY SVG GAUGE */
+.telem-gauge{display:flex;flex-direction:column;align-items:center;gap:4px}
+
+/* SETTINGS ROWS */
+.setting-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 0;border-bottom:1px solid rgba(0,212,255,0.07);
+}
+.setting-label{font-size:14px;color:var(--text)}
+.setting-sub{font-size:11px;color:var(--text-dim);font-family:var(--font-mono)}
+.toggle{
+  width:44px;height:24px;background:rgba(255,255,255,0.1);border-radius:12px;
+  position:relative;cursor:pointer;transition:var(--transition);flex-shrink:0;
+}
+.toggle.on{background:var(--orange)}
+.toggle::after{
+  content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;
+  background:#fff;border-radius:50%;transition:var(--transition);
+}
+.toggle.on::after{left:23px}
+
+/* PREDICTION AI PULSE */
+.ai-pulse{
+  position:relative;display:flex;align-items:center;justify-content:center;
+  width:120px;height:120px;margin:0 auto;
+}
+.ai-ring{
+  position:absolute;border-radius:50%;border:2px solid var(--cyan);
+  animation:ring-expand 3s infinite;
+}
+.ai-ring:nth-child(2){animation-delay:1s}
+.ai-ring:nth-child(3){animation-delay:2s}
+@keyframes ring-expand{0%{width:20px;height:20px;opacity:0.9;border-color:var(--cyan)}100%{width:120px;height:120px;opacity:0;border-color:var(--orange)}}
+.ai-core{
+  width:48px;height:48px;border-radius:50%;
+  background:radial-gradient(circle,var(--cyan),rgba(0,212,255,0.3));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-hud);font-size:10px;color:#000;font-weight:700;
+  box-shadow:0 0 30px var(--cyan);z-index:1;
+}
+</style>
+</head>
+<body>
+
+<!-- LANDING PAGE (shown initially) -->
+<div id="landing">
+  <div class="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-particles" id="particles"></div>
+    <div style="position:relative;z-index:2">
+      <div class="hero-badge">▸ AI-POWERED VEHICLE INTELLIGENCE v4.0</div>
+      <h1 class="hero-title"><span class="hero-title-drive">DRIVESAFE</span><span class="hero-title-sep">/</span><span class="hero-title-ai">AI</span></h1>
+      <p class="hero-sub">Next-generation vehicle intelligence platform with real-time driver monitoring, road risk analytics, and predictive AI safety systems.</p>
+      <div class="hero-btns">
+        <button class="btn btn-primary" onclick="enterDashboard()">⬡ START MONITORING</button>
+        <button class="btn btn-secondary" onclick="enterDashboard('dashboard')">◈ OPEN DASHBOARD</button>
+        <button class="btn btn-danger" onclick="enterDashboard('emergency')">⚠ EMERGENCY MODE</button>
+        <button class="btn btn-secondary" onclick="enterDashboard('heatmap')">◉ EXPLORE ANALYTICS</button>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><span class="hero-stat-val" data-count="99.7">0</span><span class="hero-stat-lbl">ACCURACY %</span></div>
+        <div class="hero-stat"><span class="hero-stat-val" data-count="2.4">0</span><span class="hero-stat-lbl">MS LATENCY</span></div>
+        <div class="hero-stat"><span class="hero-stat-val" data-count="14000">0</span><span class="hero-stat-lbl">DRIVERS MONITORED</span></div>
+        <div class="hero-stat"><span class="hero-stat-val" data-count="847">0</span><span class="hero-stat-lbl">ACCIDENTS PREVENTED</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="landing-section">
+    <div style="text-align:center">
+      <div class="landing-section-title">CORE AI INTELLIGENCE</div>
+      <div class="landing-section-sub">// MULTI-LAYER SAFETY ARCHITECTURE //</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px">
+      <div class="feature-card"><span class="feature-icon" style="color:var(--orange)">👁</span><div class="feature-title">EYE TRACKING</div><div class="feature-desc">Real-time blink rate monitoring with microsecond precision EAR scoring and drowsiness prediction.</div></div>
+      <div class="feature-card"><span class="feature-icon" style="color:var(--cyan)">🧠</span><div class="feature-title">ATTENTION AI</div><div class="feature-desc">Neural network-powered attention tracking with multi-point facial landmark analysis at 60fps.</div></div>
+      <div class="feature-card"><span class="feature-icon" style="color:var(--green-safe)">🛡</span><div class="feature-title">ROAD RISK ENGINE</div><div class="feature-desc">Live geospatial risk scoring using traffic density, crossing data, and historical accident analysis.</div></div>
+      <div class="feature-card"><span class="feature-icon" style="color:var(--red-alert)">⚠</span><div class="feature-title">PREDICTIVE ALERTS</div><div class="feature-desc">ML-powered future risk forecasting with 15-minute prediction window and confidence scoring.</div></div>
+      <div class="feature-card"><span class="feature-icon" style="color:var(--orange)">📡</span><div class="feature-title">FLEET INTELLIGENCE</div><div class="feature-desc">Enterprise-grade fleet analytics with per-driver scoring, trip analysis, and risk pattern detection.</div></div>
+      <div class="feature-card"><span class="feature-icon" style="color:var(--cyan)">🚨</span><div class="feature-title">EMERGENCY SYSTEM</div><div class="feature-desc">One-tap SOS with auto location broadcast, nearest hospital routing, and emergency service dispatch.</div></div>
+    </div>
+  </div>
+
+  <div class="landing-section" style="background:rgba(0,212,255,0.02);border-top:1px solid var(--panel-border);border-bottom:1px solid var(--panel-border)">
+    <div style="text-align:center">
+      <div class="landing-section-title">SYSTEM ARCHITECTURE</div>
+      <div class="landing-section-sub">// PRODUCTION-READY FASTAPI BACKEND //</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px">
+      <div class="panel"><div class="panel-title"><span class="dot"></span>API HEALTH</div><div class="metric-big cyan" id="land-api-status" style="font-size:16px">CHECKING...</div></div>
+      <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>ENDPOINTS</div><div class="metric-big" style="font-size:24px">16+</div><div class="metric-label">LIVE ROUTES</div></div>
+      <div class="panel"><div class="panel-title"><span class="dot"></span>RESPONSE TIME</div><div class="metric-big cyan" style="font-size:24px">~12ms</div><div class="metric-label">AVERAGE LATENCY</div></div>
+      <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>UPTIME</div><div class="metric-big" style="font-size:24px">99.9%</div><div class="metric-label">SLA GUARANTEE</div></div>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:60px 40px">
+    <h2 style="font-family:var(--font-hud);font-size:28px;color:var(--text);margin-bottom:16px">READY TO DEPLOY?</h2>
+    <p style="color:var(--text-dim);margin-bottom:32px;font-size:15px">Enter the DriveSafe-AI command center and take control of your fleet's safety intelligence.</p>
+    <button class="btn btn-primary" style="font-size:14px;padding:16px 40px" onclick="enterDashboard()">⬡ LAUNCH PLATFORM</button>
+  </div>
+
+  <div class="landing-footer">
+    <div style="font-family:var(--font-hud);font-size:16px;color:var(--orange);margin-bottom:8px">DRIVESAFE — AI</div>
+    <div style="margin-bottom:8px">Next-Generation Vehicle Intelligence Platform | Built on FastAPI + React</div>
+    <div style="color:rgba(232,239,248,0.3)">© 2025 DriveSafe Technologies. All systems operational.</div>
+  </div>
+</div>
+
+<!-- MAIN APP (hidden until enter) -->
+<div id="app" style="display:none">
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">DS</div>
+      <div id="logo-text-wrap">
+        <div class="logo-text">DRIVESAFE</div>
+        <div class="logo-sub">AI PLATFORM</div>
+      </div>
+    </div>
+    <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
+      <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="nav-section">
+      <div class="nav-label">MAIN</div>
+      <div class="nav-item active" onclick="navigate('dashboard')">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>
+        <span class="nav-text">Dashboard</span><div class="nav-dot"></div>
+      </div>
+      <div class="nav-item" onclick="navigate('monitoring')">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/><circle cx="17" cy="8" r="2" fill="currentColor" opacity="0.4"/></svg></div>
+        <span class="nav-text">Driver Monitoring</span>
+        <span class="nav-badge">LIVE</span>
+      </div>
+      <div class="nav-label">ANALYTICS</div>
+      <div class="nav-item" onclick="navigate('heatmap')">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg></div>
+        <span class="nav-text">Heatmap</span><div class="nav-dot"></div>
+      </div>
+      <div class="nav-item" onclick="navigate('risk')">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 19h20L12 2z"/><path d="M12 9v4m0 4h.01"/></svg></div>
+        <span class="nav-text">Road Risk</span><div class="nav-dot"></div>
+      </div>
+      <div class="nav-item" onclick="navigate('fleet')">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M6 17v2m12-2v2"/><path d="M2 12h20"/></svg></div>
+        <span class="nav-text">Fleet Analytics</span><div class="nav-dot"></div>
+      </div>
+      <div class="nav-item" onclick="navigate('predict')">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+        <span class="nav-text">Predictive AI</span><div class="nav-dot"></div>
+      </div>
+      <div class="nav-label">SYSTEMS</div>
+      <div class="nav-item" onclick="navigate('emergency')">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01" stroke="var(--red-alert)"/></svg></div>
+        <span class="nav-text" style="color:var(--red-alert)">Emergency</span>
+        <div class="nav-dot" style="background:var(--red-alert);animation:blink 1s infinite"></div>
+      </div>
+      <div class="nav-item" onclick="navigate('telemetry')">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg></div>
+        <span class="nav-text">Telemetry</span><div class="nav-dot"></div>
+      </div>
+      <div class="nav-item" onclick="navigate('settings')">
+        <div class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></div>
+        <span class="nav-text">Settings</span><div class="nav-dot"></div>
+      </div>
+    </div>
+    <div class="sidebar-status">
+      <span class="status-dot"></span>
+      <span class="status-text" style="font-size:10px;color:var(--green-safe)">SYSTEM ONLINE</span>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="topbar">
+      <div class="topbar-breadcrumb">DRIVESAFE-AI / <span id="breadcrumb-text">DASHBOARD</span></div>
+      <div class="topbar-spacer"></div>
+      <div class="topbar-time" id="topbar-time">00:00:00</div>
+      <div class="topbar-chip" onclick="navigate('monitoring')">▶ LIVE MONITORING</div>
+      <div class="topbar-chip danger" id="risk-chip" style="display:none">⚠ RISK DETECTED</div>
+      <div class="topbar-chip" onclick="navigate('emergency')">🆘 EMERGENCY</div>
+    </div>
+    <div id="page-container"></div>
+  </div>
+</div>
+
+<!-- ALERT BANNER -->
+<div class="alert-banner" id="alert-banner">
+  <div style="animation:blink 0.5s infinite">⚠</div>
+  <span id="alert-text">DROWSINESS DETECTED — PLEASE PULL OVER SAFELY</span>
+  <div class="topbar-spacer"></div>
+  <button class="btn btn-danger" style="padding:6px 14px;font-size:10px" onclick="dismissAlert()">DISMISS</button>
+</div>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif" style="display:none">
+  <div class="notif-title" id="notif-title"></div>
+  <div id="notif-body" style="color:var(--text-dim);font-size:12px"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<script>
+const API = 'http://localhost:8000';
+let faceMesh;
+let webcam;
+let currentPage = '';
+let sidebarCollapsed = false;
+let charts = {};
+let apiOnline = false;
+let state = {
+  lat: null,
+  lng: null,
+  drowsyScore: 0,
+  companyId: 1,
+  driverId: 1
+};
+
+// ---- MOCK DATA ----
+const MOCK = {
+  health: { status: 'ok', backend: 'FastAPI v0.100', uptime: '99.9%' },
+  summary: {
+    driverScore:87, riskScore:34, alertsToday:12, tripsToday:6,
+    eyeAR:0.32, blinkRate:15, attentionScore:91, drowsinessLevel:'LOW',
+    speed:68, engineRPM:2800, fuelLevel:74, batteryV:12.6
+  },
+  heatmap: Array.from({length:400},()=>Math.random()),
+  trips: [
+    {id:'T-001',driver:'Alex Chen',distance:'42km',duration:'38min',score:88,risk:'LOW',time:'08:14'},
+    {id:'T-002',driver:'Sara Kim',distance:'27km',duration:'24min',score:72,risk:'MED',time:'09:22'},
+    {id:'T-003',driver:'Raj Patel',distance:'61km',duration:'55min',score:95,risk:'LOW',time:'10:40'},
+    {id:'T-004',driver:'Maya Liu',distance:'18km',duration:'19min',score:61,risk:'HIGH',time:'11:55'},
+    {id:'T-005',driver:'Tom Walsh',distance:'33km',duration:'31min',score:79,risk:'LOW',time:'13:08'},
+  ],
+  drivers: [
+    {name:'Alex Chen',score:88,trips:24,alerts:3,status:'ACTIVE'},
+    {name:'Sara Kim',score:72,trips:18,alerts:7,status:'ACTIVE'},
+    {name:'Raj Patel',score:95,trips:31,alerts:1,status:'ON TRIP'},
+    {name:'Maya Liu',score:61,trips:12,alerts:14,status:'RESTING'},
+    {name:'Tom Walsh',score:79,trips:22,alerts:5,status:'ACTIVE'},
+    {name:'Priya Singh',score:83,trips:19,alerts:4,status:'ACTIVE'},
+  ],
+  risk: {score:34,level:'MODERATE',factors:['Intersection density HIGH','Rain probability 40%','Peak hour traffic'],zones:['Zone-A: HIGH','Zone-B: LOW','Zone-C: MODERATE']},
+  predict: {next1h:28,next3h:45,next6h:67,confidence:84,recommendation:'Avoid highway 45 between 17:00-18:30. High congestion + rain predicted.'},
+  telemetry: {speed:68,rpm:2800,fuel:74,battery:12.6,temp:92,oilPressure:42,tirePressures:[34,33,35,34],laneAssist:'ACTIVE',abs:'ARMED',esc:'ARMED'},
+  events: [
+    {time:'13:42:11',msg:'Eye blink rate normalized',type:'ok'},
+    {time:'13:41:58',msg:'Attention restored — 91%',type:'ok'},
+    {time:'13:41:32',msg:'Micro-drowsiness event detected',type:'alert'},
+    {time:'13:40:15',msg:'Speed limit advisory: 65 km/h zone',type:'warn'},
+    {time:'13:38:44',msg:'Lane departure warning',type:'alert'},
+    {time:'13:37:22',msg:'System health check passed',type:'ok'},
+    {time:'13:35:01',msg:'New trip segment started',type:'ok'},
+  ],
+  emergency: {
+    hospitals:[{name:'City General Hospital',dist:'2.3km',phone:'911',lat:28.7,lng:77.1},{name:'Apollo Trauma Center',dist:'4.1km',phone:'011-4600-1234',lat:28.72,lng:77.12}],
+    police:[{name:'Central Police Station',dist:'1.8km',phone:'100',lat:28.71,lng:77.09}],
+    shelters:[{name:'Community Safety Hub',dist:'3.2km',phone:'1800-XXX',lat:28.69,lng:77.11}]
+  }
+};
+
+// ---- API CLIENT ----
+async function apiGet(path, fallback) {
+  try {
+    const r = await fetch(API + path, {signal: AbortSignal.timeout(3000)});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    apiOnline = true;
+    return await r.json();
+  } catch (err) {
+      console.warn("API fallback:", err);
+      return fallback;
+    }
+}
+
+// ---- TIME ----
+setInterval(() => {
+  const n = new Date();
+  const el = document.getElementById('topbar-time');
+  if (el) el.textContent = n.toLocaleTimeString('en-US',{hour12:false});
+}, 1000);
+
+// ---- PARTICLES ----
+function createParticles() {
+  const c = document.getElementById('particles');
+  if (!c) return;
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.cssText = `left:${Math.random()*100}%;animation-duration:${8+Math.random()*12}s;animation-delay:-${Math.random()*10}s;opacity:${0.3+Math.random()*0.5}`;
+    if (Math.random() > 0.5) { p.style.background = 'var(--orange)'; p.style.boxShadow = '0 0 4px var(--orange)'; }
+    c.appendChild(p);
+  }
+}
+createParticles();
+navigator.geolocation.getCurrentPosition((pos) => {
+  state.lat = pos.coords.latitude;
+  state.lng = pos.coords.longitude;
+
+  console.log("LIVE GPS:", state.lat, state.lng);
+});
+
+// ---- COUNTER ANIM ----
+function animateCounters() {
+  document.querySelectorAll('[data-count]').forEach(el => {
+    const target = parseFloat(el.dataset.count);
+    const isFloat = target < 100;
+    let current = 0;
+    const step = target / 60;
+    const timer = setInterval(() => {
+      current = Math.min(current + step, target);
+      el.textContent = isFloat ? current.toFixed(1) : Math.round(current).toLocaleString();
+      if (current >= target) clearInterval(timer);
+    }, 16);
+  });
+}
+setTimeout(animateCounters, 200);
+
+// ---- API HEALTH CHECK ----
+apiGet('/health', MOCK.health).then(d => {
+  const el = document.getElementById('land-api-status');
+  if (el) { el.textContent = apiOnline ? '✓ ONLINE' : 'DEMO MODE'; el.style.color = apiOnline ? 'var(--green-safe)' : 'var(--orange)'; }
+});
+
+// ---- ENTER DASHBOARD ----
+function enterDashboard(page = 'dashboard') {
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  navigate(page);
+}
+async function startCamera() {
+  const video = document.getElementById("driverCam");
+  const canvas = document.getElementById("faceCanvas");
+
+  if (!video || !canvas) return;
+
+  const ctx = canvas.getContext("2d");
+
+  faceMesh = new FaceMesh({
+    locateFile: (file) =>
+      `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+  });
+
+  faceMesh.setOptions({
+    maxNumFaces: 1,
+    refineLandmarks: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5,
+  });
+
+  faceMesh.onResults((results) => {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (results.multiFaceLandmarks) {
+      for (const landmarks of results.multiFaceLandmarks) {
+        drawConnectors(ctx, landmarks, FACEMESH_TESSELATION, {
+          color: "#00D4FF",
+          lineWidth: 0.5,
+        });
+      }
+
+      
+      const lm = results.multiFaceLandmarks[0];
+
+      function dist(a, b) {
+        return Math.hypot(a.x - b.x, a.y - b.y);
+      }
+
+      // LEFT EYE
+      const leftEAR = (
+        dist(lm[159], lm[145]) +
+        dist(lm[158], lm[153])
+      ) / (2 * dist(lm[33], lm[133]));
+
+      // RIGHT EYE
+      const rightEAR = (
+  dist(lm[386], lm[374]) +
+  dist(lm[385], lm[380])
+) / (2 * dist(lm[362], lm[263]));
+
+        const EAR = ((leftEAR + rightEAR) / 2).toFixed(2);
+
+        state.drowsyScore = Math.max(0, 100 - EAR * 300);
+
+        document.getElementById("ear-val").textContent = EAR;
+
+        if (!window.blinkCount) {
+          window.blinkCount = 0;
+          window.eyeClosed = false;
+        }
+
+        if (EAR < 0.22 && !window.eyeClosed) {
+          window.eyeClosed = true;
+          window.blinkCount++;
+        }
+
+        if (EAR > 0.25) {
+           window.eyeClosed = false;
+        }
+
+        document.getElementById("blink-val").textContent =
+        window.blinkCount;
+
+        // ATTENTION
+        const attention = Math.min(
+           100,
+            Math.max(40, Math.floor(EAR * 300))
+        );
+
+        document.getElementById("attn-val").textContent =
+        attention + "%";
+
+        // DROWSINESS
+        const drowsyEl = document.getElementById("drowsy-val");
+
+        if (EAR < 0.20) {
+
+          drowsyEl.textContent = "DROWSY";
+          drowsyEl.style.color = "#ff3b3b";
+
+          if (!window.alarmPlaying) {
+
+            window.alarmPlaying = true;
+
+            const audio = new Audio(
+              "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
+            );
+
+            audio.play();
+
+            setTimeout(() => {
+              window.alarmPlaying = false;
+            }, 3000);
+          }
+
+        }else {
+
+           drowsyEl.textContent = "ACTIVE";
+            drowsyEl.style.color = "#00ffb3";
+        }
+      }
+  });
+
+  webcam = new Camera(video, {
+    onFrame: async () => {
+      await faceMesh.send({ image: video });
+    },
+    width: 640,
+    height: 480,
+  });
+
+  webcam.start();
+}
+// ---- SIDEBAR ----
+function toggleSidebar() {
+  sidebarCollapsed = !sidebarCollapsed;
+  document.getElementById('sidebar').classList.toggle('collapsed', sidebarCollapsed);
+}
+
+// ---- NAVIGATION ----
+const PAGE_TITLES = {
+  dashboard:'DASHBOARD OVERVIEW', monitoring:'DRIVER MONITORING',
+  heatmap:'HEATMAP ANALYTICS', risk:'ROAD RISK INTELLIGENCE',
+  fleet:'FLEET ANALYTICS', predict:'PREDICTIVE AI',
+  emergency:'EMERGENCY SUPPORT', telemetry:'VEHICLE TELEMETRY', settings:'SETTINGS'
+};
+
+function navigate(page) {
+  if (currentPage === page) return;
+  // destroy old charts
+  Object.values(charts).forEach(c => c.destroy && c.destroy());
+  charts = {};
+  currentPage = page;
+  // update nav
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => {
+    if (el.getAttribute('onclick') && el.getAttribute('onclick').includes(`'${page}'`)) el.classList.add('active');
+  });
+  document.getElementById('breadcrumb-text').textContent = PAGE_TITLES[page] || page.toUpperCase();
+  // render page
+  const container = document.getElementById('page-container');
+  const old = container.querySelector('.page');
+  if (old) old.classList.add('out');
+  setTimeout(() => {
+    if (old) old.remove();
+    const div = document.createElement('div');
+    div.className = 'page';
+    container.appendChild(div);
+    PAGES[page](div);
+  }, old ? 200 : 0);
+}
+
+function showNotif(title, body, duration = 3000) {
+  const n = document.getElementById('notif');
+  document.getElementById('notif-title').textContent = title;
+  document.getElementById('notif-body').textContent = body;
+  n.style.display = 'block';
+  setTimeout(() => n.style.display = 'none', duration);
+}
+
+function dismissAlert() {
+  document.getElementById('alert-banner').classList.remove('visible');
+}
+
+// ---- CHART.JS DEFAULTS ----
+if (window.Chart) {
+  Chart.defaults.color = 'rgba(232,239,248,0.5)';
+  Chart.defaults.borderColor = 'rgba(0,212,255,0.1)';
+  Chart.defaults.font.family = "'Share Tech Mono', monospace";
+  Chart.defaults.font.size = 11;
+}
+
+function makeLineChart(canvasId, labels, datasets, yMax) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return null;
+  return new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 800 },
+      plugins: { legend: { display: datasets.length > 1, labels: { boxWidth: 12, padding: 16 } } },
+      scales: {
+        x: { grid: { color: 'rgba(0,212,255,0.05)' }, ticks: { maxTicksLimit: 8 } },
+        y: { grid: { color: 'rgba(0,212,255,0.05)' }, max: yMax, min: 0 }
+      }
+    }
+  });
+}
+
+function makeBarChart(canvasId, labels, data, color = '#FF6B00') {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return null;
+  return new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: color + '88', borderColor: color, borderWidth: 1 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 600 },
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(0,212,255,0.05)' } },
+        y: { grid: { color: 'rgba(0,212,255,0.05)' } }
+      }
+    }
+  });
+}
+
+function makeRadarChart(canvasId, labels, data) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return null;
+  return new Chart(ctx, {
+    type: 'radar',
+    data: { labels, datasets: [{ data, backgroundColor: 'rgba(255,107,0,0.15)', borderColor: '#FF6B00', pointBackgroundColor: '#FF6B00', borderWidth: 2 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { r: { grid: { color: 'rgba(0,212,255,0.1)' }, ticks: { display: false }, pointLabels: { font: { size: 10 } } } }
+    }
+  });
+}
+
+function makeDoughnutChart(canvasId, labels, data, colors) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return null;
+  return new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { padding: 16, boxWidth: 12 } } },
+      cutout: '72%'
+    }
+  });
+}
+
+function riskColor(val) {
+  if (val < 30) return '#00FF88';
+  if (val < 60) return '#FF6B00';
+  return '#FF2244';
+}
+
+function scoreTag(score) {
+  if (score >= 80) return `<span class="tag ok">${score}</span>`;
+  if (score >= 60) return `<span class="tag warn">${score}</span>`;
+  return `<span class="tag danger">${score}</span>`;
+}
+
+function riskTag(risk) {
+  const m = {LOW:'ok',MED:'warn',MODERATE:'warn',HIGH:'danger',MEDIUM:'warn'};
+  return `<span class="tag ${m[risk]||'info'}">${risk}</span>`;
+}
+
+// generate fake time series
+function timeLabels(n) { const arr=[]; for(let i=n;i>=0;i--) { const d=new Date(Date.now()-i*5*60000); arr.push(d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false})); } return arr; }
+function randArr(n,lo,hi) { return Array.from({length:n},()=>lo+Math.random()*(hi-lo)); }
+
+// =====================================================================
+// PAGES
+// =====================================================================
+const PAGES = {
+
+// ===== DASHBOARD =====
+dashboard(el) {
+  el.innerHTML = `
+<div class="page-title">OVERVIEW</div>
+<div class="page-subtitle">// SYSTEM HEALTH & REAL-TIME INTELLIGENCE //</div>
+<div class="grid-4" style="margin-bottom:18px">
+  <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>DRIVER SCORE</div><div class="metric-big" id="d-score">87</div><div class="metric-label">SAFETY INDEX</div><div class="stat-bar"><div class="stat-bar-fill orange" style="width:87%"></div></div></div>
+  <div class="panel"><div class="panel-title"><span class="dot red"></span>RISK LEVEL</div><div class="metric-big red" id="d-risk">34</div><div class="metric-label">CURRENT RISK</div><div class="stat-bar"><div class="stat-bar-fill red" style="width:34%"></div></div></div>
+  <div class="panel"><div class="panel-title"><span class="dot"></span>ALERTS TODAY</div><div class="metric-big cyan" id="d-alerts">12</div><div class="metric-label">TOTAL EVENTS</div></div>
+  <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>TRIPS TODAY</div><div class="metric-big" id="d-trips">6</div><div class="metric-label">COMPLETED</div></div>
+</div>
+<div class="grid-2" style="margin-bottom:18px">
+  <div class="panel"><div class="panel-title"><span class="dot"></span>RISK TIMELINE (24H)</div><div class="chart-wrap" style="height:200px"><canvas id="risk-chart"></canvas></div></div>
+  <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>DRIVER PERFORMANCE</div><div class="chart-wrap" style="height:200px"><canvas id="perf-chart"></canvas></div></div>
+</div>
+<div class="grid-2" style="margin-bottom:18px">
+  <div class="panel"><div class="panel-title"><span class="dot"></span>MONITORING STATUS</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div><div class="metric-label">EYE-AR</div><div style="font-family:var(--font-hud);font-size:22px;color:var(--cyan)">0.32</div></div>
+      <div><div class="metric-label">BLINK RATE</div><div style="font-family:var(--font-hud);font-size:22px;color:var(--orange)">15/min</div></div>
+      <div><div class="metric-label">ATTENTION</div><div style="font-family:var(--font-hud);font-size:22px;color:var(--green-safe)">91%</div></div>
+      <div><div class="metric-label">DROWSINESS</div><div style="font-family:var(--font-hud);font-size:16px;color:var(--green-safe);margin-top:5px" class="tag ok">LOW</div></div>
+    </div>
+  </div>
+  <div class="panel"><div class="panel-title"><span class="dot orange"></span>RECENT EVENTS</div>
+    <div class="live-feed" id="dash-feed"></div>
+  </div>
+</div>
+<div class="panel"><div class="panel-title"><span class="dot"></span>RECENT TRIPS</div>
+  <table class="data-table">
+    <thead><tr><th>TRIP ID</th><th>DRIVER</th><th>DISTANCE</th><th>DURATION</th><th>SCORE</th><th>RISK</th><th>TIME</th></tr></thead>
+    <tbody id="trips-table"></tbody>
+  </table>
+</div>`;
+  // fetch & populate
+  Promise.all([
+    apiGet(`/dashboard/summary?company_id=${state.companyId}&driver_id=${state.driverId}`, MOCK.summary),
+    Promise.resolve(MOCK.events),
+
+    apiGet('/fleet/trips/recent?company_id=1', MOCK.trips)
+  ]).then(([sum, events, trips]) => {
+    const s = {...MOCK.summary, ...sum};
+    document.getElementById('d-score').textContent = s.driverScore;
+    document.getElementById('d-risk').textContent = s.riskScore;
+    // feed
+    const feed = document.getElementById('dash-feed');
+    if (feed) feed.innerHTML = (events.length ? events : MOCK.events).map(e =>
+      `<div class="feed-item"><span class="feed-time">${e.time}</span><span class="feed-msg ${e.type}">${e.msg}</span></div>`).join('');
+    // trips table
+    const tb = document.getElementById('trips-table');
+    if (tb) tb.innerHTML = (trips.length ? trips : MOCK.trips).map(t =>
+      `<tr><td><span style="color:var(--cyan);font-family:var(--font-mono)">${t.id}</span></td><td>${t.driver}</td><td>${t.distance}</td><td>${t.duration}</td><td>${scoreTag(t.score)}</td><td>${riskTag(t.risk)}</td><td style="color:var(--text-dim)">${t.time}</td></tr>`).join('');
+  });
+  // charts
+  setTimeout(() => {
+    const labels = timeLabels(23);
+    charts.risk = makeLineChart('risk-chart', labels,
+      [{label:'Risk Score', data: randArr(24,20,65), borderColor:'#FF2244', backgroundColor:'rgba(255,34,68,0.08)', fill:true, tension:0.4, borderWidth:2, pointRadius:0}], 100);
+    charts.perf = makeBarChart('perf-chart', ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+      [82,78,85,91,74,88,87], '#FF6B00');
+  }, 100);
+},
+
+// ===== DRIVER MONITORING =====
+monitoring(el) {
+  el.innerHTML = `
+<div class="page-title">DRIVER MONITORING</div>
+<div class="page-subtitle">// REAL-TIME AI COCKPIT — FACIAL LANDMARK + BEHAVIORAL ANALYSIS //</div>
+<div style="display:grid;grid-template-columns:1.2fr 1fr;gap:18px;margin-bottom:18px">
+  <!-- LEFT: Camera / Eye tracking -->
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <div class="panel" style="min-height:240px;position:relative;overflow:hidden">
+      <div class="panel-title"><span class="dot red"></span>LIVE DRIVER FEED</div>
+      <div class="scanline"></div>
+      <div style="position:relative;height:180px;background:rgba(0,0,0,0.7);border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center">
+        <!-- Face outline SVG placeholder -->
+        <video 
+          id="driverCam"
+          autoplay
+          playsinline
+          muted
+          style="
+            width:100%;
+            height:100%;
+            object-fit:cover;
+            border-radius:6px;
+            transform:scaleX(-1);
+          "       
+        ></video>
+
+        <canvas
+          id="faceCanvas"
+          style="
+            position:absolute;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            pointer-events:none;
+          "
+        ></canvas>
+        <div style="position:absolute;top:8px;left:8px;font-family:var(--font-mono);font-size:9px;color:var(--cyan);opacity:0.7">CAMERA::FEED_01</div>
+        <div style="position:absolute;bottom:8px;right:8px;font-family:var(--font-mono);font-size:9px;color:var(--green-safe)">● REC 00:14:32</div>
+        <div style="position:absolute;top:8px;right:8px" class="radar-wrap">
+          <svg width="28" height="28"><circle cx="14" cy="14" r="12" fill="none" stroke="rgba(0,212,255,0.2)" stroke-width="1"/><circle cx="14" cy="14" r="8" fill="none" stroke="rgba(0,212,255,0.15)" stroke-width="0.5"/><circle cx="14" cy="14" r="4" fill="none" stroke="rgba(0,212,255,0.1)" stroke-width="0.5"/></svg>
+          <div class="radar-sweep" style="inset:0;border-radius:50%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="panel"><div class="panel-title"><span class="dot"></span>EAR SCORE</div><div class="metric-big cyan" id="ear-val">0.32</div><div class="metric-label">EYE ASPECT RATIO</div><div class="stat-bar"><div class="stat-bar-fill cyan" style="width:32%"></div></div></div>
+      <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>BLINK RATE</div><div class="metric-big" id="blink-val">15</div><div class="metric-label">BLINKS / MIN</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel"><div class="panel-title"><span class="dot green"></span>ATTENTION</div><div class="metric-big green" id="attn-val">91%</div><div class="metric-label">FOCUS SCORE</div><div class="stat-bar"><div class="stat-bar-fill green" style="width:91%"></div></div></div>
+      <div class="panel success"><div class="panel-title"><span class="dot green"></span>DROWSINESS</div><div style="font-family:var(--font-hud);font-size:20px;color:var(--green-safe);margin-top:8px" id="drowsy-val">LOW</div><div class="metric-label" style="margin-top:6px">STATUS</div></div>
+    </div>
+  </div>
+  <!-- RIGHT: 3D Driving scene -->
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <div class="panel" style="min-height:300px;position:relative;overflow:hidden">
+      <div class="panel-title"><span class="dot orange"></span>TELEMETRY HUD</div>
+      <canvas id="scene-canvas" style="width:100%;height:240px;border-radius:6px;background:#000"></canvas>
+    </div>
+    <div class="grid-2">
+      <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>SPEED</div><div class="metric-big" id="spd-val">68</div><div class="metric-label">KM/H</div></div>
+      <div class="panel"><div class="panel-title"><span class="dot red"></span>RISK SCORE</div><div class="metric-big red" id="risk-val">34</div><div class="metric-label">DRIVE RISK</div></div>
+    </div>
+    <div class="panel"><div class="panel-title"><span class="dot"></span>AI ALERTS</div>
+      <div id="ai-alerts" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+  </div>
+</div>
+<!-- BOTTOM -->
+<div class="grid-2">
+  <div class="panel"><div class="panel-title"><span class="dot"></span>RISK TIMELINE</div><div class="chart-wrap"><canvas id="mon-risk-chart"></canvas></div></div>
+  <div class="panel"><div class="panel-title"><span class="dot orange"></span>LIVE EVENT LOG</div><div class="live-feed" id="mon-feed"></div></div>
+</div>`;
+  // fetch data
+  apiGet('/dashboard/summary', MOCK.summary).then(s => {
+    s = {...MOCK.summary,...s};
+    document.getElementById('ear-val').textContent = s.eyeAR;
+    document.getElementById('blink-val').textContent = s.blinkRate;
+    document.getElementById('attn-val').textContent = s.attentionScore + '%';
+    document.getElementById('spd-val').textContent = s.speed;
+    document.getElementById('risk-val').textContent = s.riskScore;
+    document.getElementById('drowsy-val').textContent = s.drowsinessLevel;
+  });
+  apiGet('/api/events', MOCK.events).then(evts => {
+    const feed = document.getElementById('mon-feed');
+    if (feed) feed.innerHTML = (evts.length ? evts : MOCK.events).map(e =>
+      `<div class="feed-item"><span class="feed-time">${e.time}</span><span class="feed-msg ${e.type}">${e.msg}</span></div>`).join('');
+  });
+  // AI Alerts
+  const alertsEl = document.getElementById('ai-alerts');
+  if (alertsEl) alertsEl.innerHTML = [
+    {type:'ok', msg:'Eyes Open — No Blink Anomaly'},
+    {type:'warn', msg:'Micro-Distraction +12s ago'},
+    {type:'ok', msg:'Head Pose Nominal'},
+    {type:'ok', msg:'Lane Position: CENTERED'},
+  ].map(a => `<div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:6px;background:rgba(0,0,0,0.3)"><span class="tag ${a.type}">${a.type.toUpperCase()}</span><span style="font-size:12px;color:var(--text-dim)">${a.msg}</span></div>`).join('');
+  // draw scene canvas
+  setTimeout(() => {
+    startCamera();
+    drawDrivingScene();
+    charts.monRisk = makeLineChart('mon-risk-chart', timeLabels(29),
+      [{label:'Risk', data:randArr(30,15,55), borderColor:'#FF2244', backgroundColor:'rgba(255,34,68,0.08)', fill:true, tension:0.4, borderWidth:2, pointRadius:0},
+       {label:'Attention', data:randArr(30,70,95), borderColor:'#00FF88', backgroundColor:'transparent', tension:0.4, borderWidth:1.5, pointRadius:0}], 100);
+  }, 100);
+},
+
+// ===== HEATMAP =====
+heatmap(el) {
+  el.innerHTML = `
+<div class="page-title">HEATMAP ANALYTICS</div>
+<div class="page-subtitle">// GEOGRAPHIC RISK DENSITY MAPPING — LIVE GRID VISUALIZATION //</div>
+<div class="grid-4" style="margin-bottom:18px">
+  <div class="panel"><div class="panel-title"><span class="dot red"></span>HIGH RISK ZONES</div><div class="metric-big red">24</div></div>
+  <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>MEDIUM RISK</div><div class="metric-big">67</div></div>
+  <div class="panel success"><div class="panel-title"><span class="dot green"></span>LOW RISK</div><div class="metric-big green">209</div></div>
+  <div class="panel"><div class="panel-title"><span class="dot"></span>TOTAL ZONES</div><div class="metric-big cyan">400</div></div>
+</div>
+<div class="panel" style="margin-bottom:18px">
+  <div class="panel-title"><span class="dot orange"></span>RISK DENSITY GRID <span style="margin-left:auto;font-size:9px;display:flex;gap:8px"><span style="color:var(--green-safe)">■ LOW</span><span style="color:var(--orange)">■ MED</span><span style="color:var(--red-alert)">■ HIGH</span></span></div>
+  <div class="heatmap-grid" id="heatmap-grid"></div>
+</div>
+<div class="grid-2">
+  <div class="panel"><div class="panel-title"><span class="dot"></span>RISK DISTRIBUTION</div><div class="chart-wrap" style="height:200px"><canvas id="heat-dist"></canvas></div></div>
+  <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>HOURLY RISK PATTERN</div><div class="chart-wrap" style="height:200px"><canvas id="heat-hourly"></canvas></div></div>
+</div>`;
+  apiGet(
+  `/risk/heatmap?lat=${state.lat}&lng=${state.lng}`, {data: MOCK.heatmap}).then(d => {
+    const data = d.data || d || MOCK.heatmap;
+    const grid = document.getElementById('heatmap-grid');
+    if (grid) {
+      grid.innerHTML = data.slice(0,400).map(v => {
+        const pct = Math.round(v * 100);
+        let color;
+        if (v < 0.3) color = `rgba(0,255,136,${0.3+v*0.7})`;
+        else if (v < 0.6) color = `rgba(255,107,0,${0.4+v*0.5})`;
+        else color = `rgba(255,34,68,${0.5+v*0.4})`;
+        return `<div class="heatmap-cell" style="background:${color}" title="Risk: ${pct}%"></div>`;
+      }).join('');
+    }
+  });
+  setTimeout(() => {
+    charts.heatDist = makeDoughnutChart('heat-dist', ['Low Risk','Medium Risk','High Risk'],
+      [209, 167, 24], ['#00FF88','#FF6B00','#FF2244']);
+    charts.heatHour = makeLineChart('heat-hourly',
+      ['00','02','04','06','08','10','12','14','16','18','20','22'],
+      [{label:'Risk Index', data:[12,8,6,18,45,38,52,65,71,68,43,22], borderColor:'#FF6B00', backgroundColor:'rgba(255,107,0,0.1)', fill:true, tension:0.5, borderWidth:2, pointRadius:3, pointBackgroundColor:'#FF6B00'}], 100);
+  }, 100);
+},
+
+// ===== ROAD RISK =====
+risk(el) {
+  el.innerHTML = `
+<div class="page-title">ROAD RISK INTELLIGENCE</div>
+<div class="page-subtitle">// GEOSPATIAL RISK SCORING + LIVE TRAFFIC ANALYSIS //</div>
+<div class="grid-4" style="margin-bottom:18px">
+  <div class="panel danger"><div class="panel-title"><span class="dot red"></span>ZONE RISK</div><div class="metric-big red">MODERATE</div></div>
+  <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>RISK SCORE</div><div class="metric-big">34/100</div></div>
+  <div class="panel"><div class="panel-title"><span class="dot"></span>CROSSINGS</div><div class="metric-big cyan">8</div><div class="metric-label">NEARBY</div></div>
+  <div class="panel"><div class="panel-title"><span class="dot green"></span>TRAFFIC SIGNALS</div><div class="metric-big green">12</div><div class="metric-label">IN RANGE</div></div>
+</div>
+<div class="grid-2" style="margin-bottom:18px">
+  <div class="panel" style="grid-column:1">
+    <div class="panel-title"><span class="dot orange"></span>ROAD MAP INTELLIGENCE</div>
+    <div class="map-frame">
+      <div class="map-grid"></div>
+      <div style="position:relative;z-index:2;text-align:center">
+        <div style="font-family:var(--font-hud);font-size:13px;color:var(--cyan);margin-bottom:8px">LIVE MAP FEED</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">OpenStreetMap Integration Active</div>
+        <div style="margin-top:12px;font-size:11px;color:var(--orange)">⚠ 3 HIGH-RISK INTERSECTIONS DETECTED</div>
+      </div>
+      <!-- Fake markers -->
+      <div class="map-marker red" style="top:35%;left:45%"></div>
+      <div class="map-ping" style="top:35%;left:45%"></div>
+      <div class="map-marker orange" style="top:55%;left:62%"></div>
+      <div class="map-marker orange" style="top:28%;left:70%"></div>
+      <div class="map-marker cyan" style="top:65%;left:38%"></div>
+      <div class="map-marker cyan" style="top:42%;left:25%"></div>
+    </div>
+  </div>
+  <div class="panel orange">
+    <div class="panel-title"><span class="dot orange"></span>AI RISK ANALYSIS</div>
+    <div style="space-y:10px">
+      <div style="margin-bottom:16px">
+        <div class="metric-label">OVERALL RISK</div>
+        <div class="metric-big" style="margin-top:4px" id="zone-risk-score">34</div>
+        <div class="stat-bar" style="margin-top:8px"><div class="stat-bar-fill orange" id="zone-risk-bar" style="width:34%"></div></div>
+      </div>
+      <div style="font-family:var(--font-body);font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:16px" id="ai-explain">
+        Current route passes through Zone-B with moderate intersection density. Rain probability at 40% increases hydroplaning risk. Recommend reducing speed by 15% in next 2km segment.
+      </div>
+      <div id="risk-factors"></div>
+    </div>
+  </div>
+</div>
+<div class="panel">
+  <div class="panel-title"><span class="dot"></span>RISK TREND ANALYSIS</div>
+  <div class="chart-wrap" style="height:160px"><canvas id="risk-trend"></canvas></div>
+</div>`;
+  apiGet(
+  `/risk/combined?lat=${state.lat}&lng=${state.lng}&drowsy_score=${state.drowsyScore}`,
+  MOCK.risk
+  ).then(d => {
+    const r = {...MOCK.risk,...d};
+    const riskFactorsEl = document.getElementById('risk-factors');
+    if (riskFactorsEl) riskFactorsEl.innerHTML = r.factors.map(f =>
+      `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="color:var(--orange)">▸</span><span style="font-size:12px;color:var(--text-dim)">${f}</span></div>`).join('');
+  });
+  setTimeout(() => {
+    charts.riskTrend = makeLineChart('risk-trend', timeLabels(47),
+      [{label:'Road Risk', data:randArr(48,15,70), borderColor:'#FF6B00', backgroundColor:'rgba(255,107,0,0.07)', fill:true, tension:0.4, borderWidth:2, pointRadius:0},
+       {label:'Predicted', data:randArr(48,10,60), borderColor:'rgba(0,212,255,0.5)', borderDash:[4,4], backgroundColor:'transparent', tension:0.4, borderWidth:1.5, pointRadius:0}], 100);
+  }, 100);
+},
+
+// ===== FLEET =====
+fleet(el) {
+  el.innerHTML = `
+<div class="page-title">FLEET ANALYTICS</div>
+<div class="page-subtitle">// ENTERPRISE FLEET INTELLIGENCE — DRIVER MANAGEMENT + TRIP ANALYSIS //</div>
+<div class="grid-4" style="margin-bottom:18px">
+  <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>TOTAL DRIVERS</div><div class="metric-big">24</div></div>
+  <div class="panel success"><div class="panel-title"><span class="dot green"></span>ACTIVE NOW</div><div class="metric-big green">8</div></div>
+  <div class="panel"><div class="panel-title"><span class="dot"></span>TRIPS TODAY</div><div class="metric-big cyan">31</div></div>
+  <div class="panel danger"><div class="panel-title"><span class="dot red"></span>HIGH RISK</div><div class="metric-big red">2</div></div>
+</div>
+<div class="grid-2" style="margin-bottom:18px">
+  <div class="panel"><div class="panel-title"><span class="dot orange"></span>WEEKLY RISK TRENDS</div><div class="chart-wrap" style="height:180px"><canvas id="fleet-risk"></canvas></div></div>
+  <div class="panel"><div class="panel-title"><span class="dot"></span>DRIVER PERFORMANCE RADAR</div><div class="chart-wrap" style="height:180px"><canvas id="fleet-radar"></canvas></div></div>
+</div>
+<div class="panel" style="margin-bottom:18px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div class="panel-title" style="margin-bottom:0"><span class="dot orange"></span>DRIVER ROSTER</div>
+    <button class="btn btn-secondary" style="padding:6px 14px;font-size:10px" onclick="showNotif('REPORT','Generating fleet PDF report...')">⬡ EXPORT REPORT</button>
+  </div>
+  <table class="data-table">
+    <thead><tr><th>DRIVER</th><th>SAFETY SCORE</th><th>TRIPS</th><th>ALERTS</th><th>STATUS</th></tr></thead>
+    <tbody id="fleet-table"></tbody>
+  </table>
+</div>
+<div class="panel">
+  <div class="panel-title"><span class="dot"></span>TRIP ANALYTICS</div>
+  <div class="chart-wrap" style="height:160px"><canvas id="fleet-trips"></canvas></div>
+</div>`;
+  apiGet('/fleet/drivers', MOCK.drivers).then(drivers => {
+    const tb = document.getElementById('fleet-table');
+    const statusColors = {ACTIVE:'info','ON TRIP':'ok',RESTING:'warn'};
+    if (tb) tb.innerHTML = (drivers.length ? drivers : MOCK.drivers).map(d =>
+      `<tr><td style="color:var(--text)">${d.name}</td><td>${scoreTag(d.score)}</td><td style="color:var(--text-dim)">${d.trips}</td><td style="color:var(--text-dim)">${d.alerts}</td><td><span class="tag ${statusColors[d.status]||'info'}">${d.status}</span></td></tr>`).join('');
+  });
+  setTimeout(() => {
+    charts.fleetRisk = makeLineChart('fleet-risk', ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+      [{label:'Risk Avg', data:[38,42,35,55,47,32,41], borderColor:'#FF2244', backgroundColor:'rgba(255,34,68,0.08)', fill:true, tension:0.4, borderWidth:2, pointRadius:4, pointBackgroundColor:'#FF2244'},
+       {label:'Score Avg', data:[82,78,84,74,81,89,86], borderColor:'#00FF88', backgroundColor:'transparent', tension:0.4, borderWidth:1.5, pointRadius:0}], 100);
+    charts.fleetRadar = makeRadarChart('fleet-radar', ['Speed','Attention','Reaction','Braking','Lane','Fatigue'], [82,91,76,88,84,95]);
+    charts.fleetTrips = makeBarChart('fleet-trips', ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], [28,32,41,38,45,22,31], '#00D4FF');
+  }, 100);
+},
+
+// ===== PREDICT =====
+predict(el) {
+  el.innerHTML = `
+<div class="page-title">PREDICTIVE AI ENGINE</div>
+<div class="page-subtitle">// MACHINE LEARNING RISK FORECASTING + BEHAVIORAL PATTERN ANALYSIS //</div>
+<div style="display:grid;grid-template-columns:1fr 2fr;gap:18px;margin-bottom:18px">
+  <div class="panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:200px">
+    <div class="panel-title" style="text-align:center;margin-bottom:20px"><span class="dot"></span>AI CONFIDENCE CORE</div>
+    <div class="ai-pulse">
+      <div class="ai-ring"></div>
+      <div class="ai-ring"></div>
+      <div class="ai-ring"></div>
+      <div class="ai-core" id="conf-val">84%</div>
+    </div>
+    <div class="metric-label" style="margin-top:16px;text-align:center">PREDICTION CONFIDENCE</div>
+  </div>
+  <div class="panel orange">
+    <div class="panel-title"><span class="dot orange"></span>RISK FORECAST TIMELINE</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="text-align:center;padding:14px;border-radius:8px;background:rgba(0,0,0,0.3)">
+        <div class="metric-label">NEXT 1H</div>
+        <div class="metric-big" style="font-size:26px" id="pred-1h">28</div>
+        <div class="tag ok" style="margin-top:6px">LOW</div>
+      </div>
+      <div style="text-align:center;padding:14px;border-radius:8px;background:rgba(0,0,0,0.3)">
+        <div class="metric-label">NEXT 3H</div>
+        <div class="metric-big" style="font-size:26px;color:var(--orange)" id="pred-3h">45</div>
+        <div class="tag warn" style="margin-top:6px">MED</div>
+      </div>
+      <div style="text-align:center;padding:14px;border-radius:8px;background:rgba(0,0,0,0.3)">
+        <div class="metric-label">NEXT 6H</div>
+        <div class="metric-big red" style="font-size:26px" id="pred-6h">67</div>
+        <div class="tag danger" style="margin-top:6px">HIGH</div>
+      </div>
+    </div>
+    <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:16px;border-left:3px solid var(--orange)">
+      <div class="panel-title" style="margin-bottom:8px"><span class="dot orange"></span>AI RECOMMENDATION</div>
+      <div id="pred-rec" style="font-size:13px;color:var(--text-dim);line-height:1.7">Loading AI recommendation...</div>
+    </div>
+  </div>
+</div>
+<div class="grid-2" style="margin-bottom:18px">
+  <div class="panel"><div class="panel-title"><span class="dot"></span>RISK PREDICTION CURVE</div><div class="chart-wrap" style="height:180px"><canvas id="pred-chart"></canvas></div></div>
+  <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>BEHAVIOR PATTERN ANALYSIS</div><div class="chart-wrap" style="height:180px"><canvas id="pred-behavior"></canvas></div></div>
+</div>
+<div class="panel">
+  <div class="panel-title"><span class="dot orange"></span>PATTERN INTELLIGENCE</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px" id="patterns"></div>
+</div>`;
+  apiGet('/predict/next', MOCK.predict).then(p => {
+    const d = {...MOCK.predict,...p};
+    document.getElementById('pred-1h').textContent = d.next1h;
+    document.getElementById('pred-3h').textContent = d.next3h;
+    document.getElementById('pred-6h').textContent = d.next6h;
+    document.getElementById('conf-val').textContent = d.confidence + '%';
+    const rec = document.getElementById('pred-rec');
+    if (rec) rec.textContent = d.recommendation;
+    const pats = document.getElementById('patterns');
+    if (pats) pats.innerHTML = [
+      {icon:'⏰',title:'PEAK RISK HOUR',val:'17:00 - 18:30',color:'var(--red-alert)'},
+      {icon:'🌧',title:'WEATHER FACTOR',val:'Rain +23% risk',color:'var(--cyan)'},
+      {icon:'📍',title:'RISK HOTSPOT',val:'Highway 45 — Exit 7',color:'var(--orange)'},
+      {icon:'💤',title:'FATIGUE WINDOW',val:'After 4h continuous',color:'var(--orange)'},
+      {icon:'🚦',title:'TRAFFIC PATTERN',val:'Rush hour congestion',color:'var(--red-alert)'},
+      {icon:'✅',title:'SAFE WINDOW',val:'09:30 - 11:00 AM',color:'var(--green-safe)'},
+    ].map(p => `<div class="panel" style="padding:14px"><div style="font-size:20px;margin-bottom:8px">${p.icon}</div><div style="font-family:var(--font-hud);font-size:9px;color:var(--text-dim);letter-spacing:2px;margin-bottom:4px">${p.title}</div><div style="color:${p.color};font-size:13px;font-weight:600">${p.val}</div></div>`).join('');
+  });
+  setTimeout(() => {
+    const futureLabels = [];
+    for(let i=0;i<12;i++) { const d=new Date(Date.now()+i*30*60000); futureLabels.push(d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false})); }
+    charts.pred = makeLineChart('pred-chart', futureLabels,
+      [{label:'Predicted Risk', data:[34,36,38,42,45,51,58,63,67,65,58,50], borderColor:'#FF6B00', backgroundColor:'rgba(255,107,0,0.1)', fill:true, tension:0.5, borderWidth:2, pointRadius:3, pointBackgroundColor:'#FF6B00'},
+       {label:'Confidence Band', data:[28,30,32,35,38,43,50,55,59,57,50,43], borderColor:'rgba(0,212,255,0.3)', backgroundColor:'transparent', borderDash:[4,4], tension:0.5, borderWidth:1, pointRadius:0}], 100);
+    charts.behavior = makeRadarChart('pred-behavior', ['Fatigue','Speed Variance','Braking Aggressiveness','Lane Discipline','Reaction Time','Attention Span'], [45,62,38,78,55,82]);
+  }, 100);
+},
+
+// ===== EMERGENCY =====
+emergency(el) {
+  el.innerHTML = `
+<div style="background:rgba(255,34,68,0.06);border:1px solid rgba(255,34,68,0.3);border-radius:8px;padding:12px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;animation:danger-pulse 2s infinite">
+  <div style="width:10px;height:10px;border-radius:50%;background:var(--red-alert);animation:blink 0.5s infinite"></div>
+  <div style="font-family:var(--font-hud);font-size:11px;color:var(--red-alert);letter-spacing:2px">EMERGENCY SYSTEM ARMED — GPS LOCK CONFIRMED — RESPONSE NETWORK ACTIVE</div>
+</div>
+<div class="page-title">EMERGENCY SUPPORT</div>
+<div class="page-subtitle">// RAPID RESPONSE NETWORK — ONE-TAP EMERGENCY DISPATCH //</div>
+<div style="display:grid;grid-template-columns:auto 1fr;gap:24px;margin-bottom:18px;align-items:start">
+  <div class="emergency-sos">
+    <div class="metric-label" style="margin-bottom:16px">EMERGENCY SOS</div>
+    <button class="sos-btn" onclick="triggerSOS()">SOS</button>
+    <div style="font-family:var(--font-mono);font-size:10px;color:rgba(255,34,68,0.7);margin-top:16px">HOLD 3 SECONDS TO ACTIVATE</div>
+    <div style="margin-top:16px;font-family:var(--font-hud);font-size:11px;color:var(--red-alert);letter-spacing:1px">AUTO-DISPATCH ENABLED</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="panel danger"><div class="panel-title"><span class="dot red"></span>LOCATION STATUS</div><div style="font-family:var(--font-mono);font-size:11px;color:var(--green-safe);margin-bottom:8px">● GPS LOCKED</div><div style="font-family:var(--font-body);font-size:12px;color:var(--text-dim)">Lat: 28.7041° N<br>Lng: 77.1025° E<br>Accuracy: ±4m</div></div>
+    <div class="panel"><div class="panel-title"><span class="dot"></span>RESPONSE TIME</div><div class="metric-big red" style="font-size:28px">4.2</div><div class="metric-label">MIN EST. ARRIVAL</div></div>
+    <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>CONTACTS ALERTED</div><div class="metric-big" style="font-size:26px">3</div><div class="metric-label">EMERGENCY CONTACTS</div></div>
+    <div class="panel success"><div class="panel-title"><span class="dot green"></span>NETWORK STATUS</div><div style="font-family:var(--font-hud);font-size:14px;color:var(--green-safe)">FULLY OPERATIONAL</div></div>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px" id="emergency-services"></div>
+<div class="panel">
+  <div class="panel-title"><span class="dot red"></span>EMERGENCY HOTLINES</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px" id="hotlines"></div>
+</div>`;
+  apiGet(
+  `/nearby/help?lat=${state.lat}&lng=${state.lng}`,
+  MOCK.emergency
+  ).then(d => {
+    const data = {...MOCK.emergency,...d};
+    const svc = document.getElementById('emergency-services');
+    const allSvcs = [
+      ...(data.hospitals||[]).map(h => ({...h, type:'HOSPITAL', icon:'🏥', color:'var(--red-alert)', borderColor:'rgba(255,34,68,0.3)'})),
+      ...(data.police||[]).map(p => ({...p, type:'POLICE', icon:'🚔', color:'var(--cyan)', borderColor:'var(--panel-border)'})),
+      ...(data.shelters||[]).map(s => ({...s, type:'SHELTER', icon:'🏠', color:'var(--orange)', borderColor:'var(--panel-border-orange)'})),
+    ];
+    if (svc) svc.innerHTML = allSvcs.slice(0,6).map(s => `
+      <div class="panel" style="border-color:${s.borderColor}">
+        <div style="font-size:24px;margin-bottom:8px">${s.icon}</div>
+        <div style="font-family:var(--font-hud);font-size:9px;color:${s.color};letter-spacing:2px;margin-bottom:4px">${s.type}</div>
+        <div style="font-size:13px;color:var(--text);font-weight:600;margin-bottom:4px">${s.name}</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-bottom:10px">${s.dist} away</div>
+        <button class="btn btn-secondary" style="font-size:10px;padding:6px 12px;width:100%" onclick="showNotif('📞 CALLING','Connecting to ${s.name}...')">NAVIGATE</button>
+      </div>`).join('');
+    const hotlines = document.getElementById('hotlines');
+    if (hotlines) hotlines.innerHTML = [
+      {name:'EMERGENCY',num:'112',color:'var(--red-alert)'},
+      {name:'POLICE',num:'100',color:'var(--cyan)'},
+      {name:'AMBULANCE',num:'108',color:'var(--red-alert)'},
+      {name:'FIRE',num:'101',color:'var(--orange)'},
+      {name:'ROADSIDE',num:'1800-XXX',color:'var(--orange)'},
+    ].map(h => `<div style="padding:14px;border-radius:8px;background:rgba(0,0,0,0.4);text-align:center;border:1px solid rgba(255,255,255,0.05)">
+      <div style="font-family:var(--font-hud);font-size:9px;color:var(--text-dim);letter-spacing:2px;margin-bottom:4px">${h.name}</div>
+      <div style="font-family:var(--font-hud);font-size:22px;color:${h.color};font-weight:700">${h.num}</div>
+      <button class="btn" style="margin-top:8px;padding:4px 12px;font-size:9px;background:rgba(255,34,68,0.1);color:${h.color};border:1px solid ${h.color};border-radius:4px" onclick="showNotif('📞 CALLING ${h.num}','Connecting emergency call...')">CALL NOW</button>
+    </div>`).join('');
+  });
+},
+
+// ===== TELEMETRY =====
+telemetry(el) {
+  el.innerHTML = `
+<div class="page-title">VEHICLE TELEMETRY</div>
+<div class="page-subtitle">// REAL-TIME SENSOR DATA + SYSTEM DIAGNOSTICS //</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin-bottom:18px" id="telem-gauges"></div>
+<div class="grid-2" style="margin-bottom:18px">
+  <div class="panel"><div class="panel-title"><span class="dot orange"></span>SPEED / RPM LIVE</div><div class="chart-wrap"><canvas id="telem-speed"></canvas></div></div>
+  <div class="panel"><div class="panel-title"><span class="dot"></span>SENSOR HEALTH MATRIX</div>
+    <table class="data-table"><thead><tr><th>SENSOR</th><th>STATUS</th><th>READING</th><th>HEALTH</th></tr></thead>
+    <tbody id="sensor-table"></tbody></table>
+  </div>
+</div>
+<div class="grid-4" style="margin-bottom:18px">
+  <div class="panel success"><div class="panel-title"><span class="dot green"></span>LANE ASSIST</div><div style="font-family:var(--font-hud);font-size:14px;color:var(--green-safe)">ACTIVE</div></div>
+  <div class="panel success"><div class="panel-title"><span class="dot green"></span>ABS</div><div style="font-family:var(--font-hud);font-size:14px;color:var(--green-safe)">ARMED</div></div>
+  <div class="panel success"><div class="panel-title"><span class="dot green"></span>ESC</div><div style="font-family:var(--font-hud);font-size:14px;color:var(--green-safe)">ARMED</div></div>
+  <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>COLLISION</div><div style="font-family:var(--font-hud);font-size:14px;color:var(--orange)">MONITORING</div></div>
+</div>
+<div class="panel">
+  <div class="panel-title"><span class="dot orange"></span>TIRE PRESSURE MONITOR</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:16px">
+    ${['FL','FR','RL','RR'].map((pos,i) => `
+    <div style="text-align:center;border:1px solid rgba(0,212,255,0.15);border-radius:8px;padding:14px">
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);margin-bottom:8px">${pos}</div>
+      <div style="font-family:var(--font-hud);font-size:24px;color:${[34,33,35,34][i]>=32?'var(--green-safe)':'var(--red-alert)'}">${[34,33,35,34][i]}</div>
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim)">PSI</div>
+      <div class="tag ok" style="margin-top:8px;font-size:9px">NOMINAL</div>
+    </div>`).join('')}
+  </div>
+</div>`;
+  // populate gauges
+  const gauges = document.getElementById('telem-gauges');
+  if (gauges) gauges.innerHTML = [
+    {label:'SPEED',val:68,max:200,unit:'KM/H',color:'#FF6B00'},
+    {label:'ENGINE RPM',val:2800,max:8000,unit:'RPM',color:'#00D4FF'},
+    {label:'FUEL LEVEL',val:74,max:100,unit:'%',color:'#00FF88'},
+    {label:'BATTERY',val:12.6,max:15,unit:'VOLTS',color:'#FF6B00'},
+    {label:'ENGINE TEMP',val:92,max:120,unit:'°C',color:'#FF2244'},
+    {label:'OIL PRESSURE',val:42,max:60,unit:'PSI',color:'#00D4FF'},
+  ].map(g => {
+    const pct = Math.round((g.val/g.max)*100);
+    return `<div class="panel telem-gauge">
+      <div class="panel-title" style="justify-content:center;margin-bottom:10px"><span class="dot" style="background:${g.color};box-shadow:0 0 6px ${g.color}"></span>${g.label}</div>
+      <svg width="120" height="80" viewBox="0 0 120 80" class="gauge-svg">
+        <path d="M15 75 A50 50 0 0 1 105 75" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8" stroke-linecap="round"/>
+        <path d="M15 75 A50 50 0 0 1 105 75" fill="none" stroke="${g.color}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${pct*1.57} 157" opacity="0.9"/>
+        <text x="60" y="70" text-anchor="middle" class="gauge-value" style="fill:${g.color}">${g.val}</text>
+        <text x="60" y="82" text-anchor="middle" class="gauge-unit">${g.unit}</text>
+      </svg>
+    </div>`;
+  }).join('');
+  // sensor table
+  const st = document.getElementById('sensor-table');
+  if (st) st.innerHTML = [
+    {s:'FRONT RADAR',status:'ok',val:'4.2m detected',h:98},
+    {s:'LANE CAMERA',status:'ok',val:'HD feed active',h:100},
+    {s:'GPS MODULE',status:'ok',val:'±4m accuracy',h:99},
+    {s:'IMU SENSOR',status:'ok',val:'0.02g lateral',h:97},
+    {s:'LIDAR FRONT',status:'warn',val:'Partial coverage',h:82},
+    {s:'REAR RADAR',status:'ok',val:'Clear',h:96},
+  ].map(r => `<tr><td style="color:var(--text)">${r.s}</td><td><span class="tag ${r.status}">${r.status.toUpperCase()}</span></td><td style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">${r.val}</td><td><div class="stat-bar" style="width:80px;display:inline-block"><div class="stat-bar-fill ${r.h>90?'green':r.h>70?'orange':'red'}" style="width:${r.h}%"></div></div></td></tr>`).join('');
+  setTimeout(() => {
+    charts.telemSpeed = makeLineChart('telem-speed', timeLabels(19),
+      [{label:'Speed (km/h)', data:randArr(20,40,90), borderColor:'#FF6B00', backgroundColor:'rgba(255,107,0,0.08)', fill:true, tension:0.4, borderWidth:2, pointRadius:0},
+       {label:'RPM (×100)', data:randArr(20,20,45), borderColor:'rgba(0,212,255,0.6)', backgroundColor:'transparent', tension:0.4, borderWidth:1.5, pointRadius:0}], null);
+  }, 100);
+},
+
+// ===== SETTINGS =====
+settings(el) {
+  el.innerHTML = `
+<div class="page-title">SETTINGS</div>
+<div class="page-subtitle">// SYSTEM CONFIGURATION + API HEALTH MONITOR //</div>
+<div class="grid-2" style="margin-bottom:18px">
+  <div class="panel">
+    <div class="panel-title"><span class="dot ${apiOnline?'green':'red'}"></span>BACKEND API STATUS</div>
+    <div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="width:12px;height:12px;border-radius:50%;background:${apiOnline?'var(--green-safe)':'var(--red-alert)'};box-shadow:0 0 8px ${apiOnline?'var(--green-safe)':'var(--red-alert)'};animation:blink 1.5s infinite"></div>
+        <span style="font-family:var(--font-mono);font-size:12px;color:${apiOnline?'var(--green-safe)':'var(--red-alert)'}">${apiOnline?'CONNECTED — FastAPI Online':'DISCONNECTED — Using Demo Data'}</span>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">BASE URL: http://localhost:8000</div>
+    </div>
+    <div id="api-endpoints"></div>
+  </div>
+  <div class="panel orange">
+    <div class="panel-title"><span class="dot orange"></span>SYSTEM DIAGNOSTICS</div>
+    <div id="sys-diag"></div>
+  </div>
+</div>
+<div class="panel" style="margin-bottom:18px">
+  <div class="panel-title"><span class="dot orange"></span>MONITORING SETTINGS</div>
+  <div id="settings-rows"></div>
+</div>
+<div class="grid-2">
+  <div class="panel"><div class="panel-title"><span class="dot"></span>CAMERA CONTROLS</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="setting-row"><div><div class="setting-label">Camera Feed</div><div class="setting-sub">Primary driver camera</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      <div class="setting-row"><div><div class="setting-label">Facial Detection</div><div class="setting-sub">Landmark tracking</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      <div class="setting-row"><div><div class="setting-label">Night Vision</div><div class="setting-sub">Low-light enhancement</div></div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+    </div>
+  </div>
+  <div class="panel orange"><div class="panel-title"><span class="dot orange"></span>NOTIFICATION PREFERENCES</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="setting-row"><div><div class="setting-label">Drowsiness Alerts</div><div class="setting-sub">High priority</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      <div class="setting-row"><div><div class="setting-label">Risk Zone Warnings</div><div class="setting-sub">Geofence alerts</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      <div class="setting-row"><div><div class="setting-label">Fleet Notifications</div><div class="setting-sub">Driver events</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      <div class="setting-row"><div><div class="setting-label">Emergency Auto-Call</div><div class="setting-sub">Auto-dispatch on SOS</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+    </div>
+  </div>
+</div>`;
+  // endpoints
+  const endpts = document.getElementById('api-endpoints');
+  if (endpts) endpts.innerHTML = ['/health','/dashboard/summary','/risk/combined','/risk/heatmap','/nearby/help','/fleet/drivers','/predict/next','/api/events'].map(ep =>
+    `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(0,212,255,0.05)"><span class="tag ${apiOnline?'ok':'warn'}">${apiOnline?'OK':'DEMO'}</span><span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">${ep}</span></div>`).join('');
+  const diag = document.getElementById('sys-diag');
+  if (diag) diag.innerHTML = [
+    {label:'Frontend Version',val:'4.0.0',color:'var(--cyan)'},
+    {label:'React',val:'18.x',color:'var(--text)'},
+    {label:'Chart.js',val:'4.4.0',color:'var(--text)'},
+    {label:'Memory Usage',val:'124 MB',color:'var(--green-safe)'},
+    {label:'Frame Rate',val:'60 FPS',color:'var(--green-safe)'},
+    {label:'API Latency',val:apiOnline?'~12ms':'N/A',color:apiOnline?'var(--green-safe)':'var(--orange)'},
+  ].map(d => `<div class="setting-row" style="padding:8px 0"><span style="font-size:13px;color:var(--text-dim)">${d.label}</span><span style="font-family:var(--font-mono);font-size:12px;color:${d.color}">${d.val}</span></div>`).join('');
+  const srows = document.getElementById('settings-rows');
+  if (srows) srows.innerHTML = [
+    {label:'Eye-AR Threshold',sub:'Drowsiness detection trigger',val:'0.25'},
+    {label:'Blink Rate Alert',sub:'Anomaly threshold (blinks/min)',val:'< 12'},
+    {label:'Risk Alert Threshold',sub:'Score to trigger warning',val:'65'},
+    {label:'Emergency Auto-Trigger',sub:'Seconds before SOS auto-send',val:'8s'},
+  ].map(s => `<div class="setting-row"><div><div class="setting-label">${s.label}</div><div class="setting-sub">${s.sub}</div></div><div style="font-family:var(--font-mono);font-size:13px;color:var(--orange)">${s.val}</div></div>`).join('');
+}
+};
+
+// ===== SPECIAL FUNCTIONS =====
+function triggerSOS() {
+  document.getElementById('alert-banner').classList.add('visible');
+  document.getElementById('alert-text').textContent = 'SOS ACTIVATED — CONTACTING EMERGENCY SERVICES — BROADCASTING LOCATION';
+  showNotif('🚨 SOS ACTIVATED', 'Emergency services notified. Location broadcast active.', 5000);
+  apiGet('/emergency', {}).then(() => {});
+}
+
+// ===== DRIVE SCENE CANVAS =====
+function drawDrivingScene() {
+  const canvas = document.getElementById('scene-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth;
+  canvas.height = 240;
+  let frame = 0;
+  const speed = { val: 68 };
+  function draw() {
+    const W = canvas.width, H = canvas.height;
+    ctx.fillStyle = '#000814';
+    ctx.fillRect(0, 0, W, H);
+    // Perspective road
+    const horizon = H * 0.42;
+    const vp = { x: W/2, y: horizon };
+    // Sky gradient
+    const skyGrad = ctx.createLinearGradient(0,0,0,horizon);
+    skyGrad.addColorStop(0, '#040610');
+    skyGrad.addColorStop(1, '#0a1020');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, W, horizon);
+    // Road
+    const roadGrad = ctx.createLinearGradient(0,horizon,0,H);
+    roadGrad.addColorStop(0,'#0a0f18');
+    roadGrad.addColorStop(1,'#111820');
+    ctx.fillStyle = roadGrad;
+    ctx.beginPath();
+    ctx.moveTo(0,H); ctx.lineTo(W,H);
+    ctx.lineTo(W*0.65,horizon); ctx.lineTo(W*0.35,horizon);
+    ctx.closePath(); ctx.fill();
+    // Lane lines
+    ctx.strokeStyle = 'rgba(255,107,0,0.6)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 8; i++) {
+      const t = ((frame/3 + i*0.15) % 1);
+      const t2 = Math.min(t+0.06,1);
+      const lx1 = W*0.5 + (W*0.5-W*0.5)*t, ly1 = horizon + (H-horizon)*t;
+      const lx2 = W*0.5 + (W*0.5-W*0.5)*t2, ly2 = horizon + (H-horizon)*t2;
+      const alpha = t * 0.7;
+      ctx.strokeStyle = `rgba(255,107,0,${alpha})`;
+      ctx.beginPath(); ctx.moveTo(lx1,ly1); ctx.lineTo(lx2,ly2); ctx.stroke();
+    }
+    // Road edge lines
+    ctx.strokeStyle = 'rgba(0,212,255,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(W*0.35,horizon); ctx.lineTo(W*0.05,H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W*0.65,horizon); ctx.lineTo(W*0.95,H); ctx.stroke();
+    // HUD overlays
+    // Speed indicator
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(10,10,100,50);
+    ctx.strokeStyle = 'rgba(0,212,255,0.4)'; ctx.lineWidth=0.5; ctx.strokeRect(10,10,100,50);
+    ctx.fillStyle = '#FF6B00'; ctx.font = 'bold 24px "Orbitron"';
+    ctx.fillText(Math.round(speed.val), 18, 45);
+    ctx.fillStyle = 'rgba(0,212,255,0.6)'; ctx.font = '9px "Share Tech Mono"';
+    ctx.fillText('KM/H', 55, 45);
+    // Lane assist
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(W-110,10,100,50);
+    ctx.strokeStyle = 'rgba(0,212,255,0.4)'; ctx.lineWidth=0.5; ctx.strokeRect(W-110,10,100,50);
+    ctx.fillStyle = '#00FF88'; ctx.font = '9px "Orbitron"';
+    ctx.fillText('LANE ASSIST', W-106, 28);
+    ctx.fillStyle = '#00FF88'; ctx.font = '11px "Share Tech Mono"';
+    ctx.fillText('CENTERED', W-106, 46);
+    // Crosshair
+    const cx = W/2, cy = H*0.38;
+    ctx.strokeStyle = 'rgba(0,212,255,0.25)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(cx-20,cy); ctx.lineTo(cx+20,cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy-20); ctx.lineTo(cx,cy+20); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx,cy,15,0,Math.PI*2); ctx.stroke();
+    frame += 0.008;
+    if (document.getElementById('scene-canvas')) requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ---- AUTO ALERTS ----
+setTimeout(() => {
+  if (currentPage === 'monitoring') {
+    document.getElementById('alert-banner').classList.add('visible');
+    setTimeout(() => document.getElementById('alert-banner').classList.remove('visible'), 5000);
+  }
+}, 12000);
+
+// ---- LIVE DATA SIMULATION ----
+setInterval(() => {
+  if (!currentPage) return;
+  const dEl = document.getElementById('d-score');
+  if (dEl) dEl.textContent = 82 + Math.floor(Math.random()*10);
+  const rEl = document.getElementById('d-risk');
+  if (rEl) rEl.textContent = 28 + Math.floor(Math.random()*20);
+}, 5000);
+
+// init
+navigate('dashboard');
+</script>
+</body>
+</html>
