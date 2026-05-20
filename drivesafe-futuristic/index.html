@@ -680,7 +680,7 @@ canvas.chart{width:100%!important;height:100%!important}
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 <script>
-const API = 'http://localhost:8000';
+const API = 'https://drivesafe-backend-harshita.onrender.com';
 let faceMesh;
 let webcam;
 let currentPage = '';
@@ -1623,7 +1623,7 @@ settings(el) {
         <div style="width:12px;height:12px;border-radius:50%;background:${apiOnline?'var(--green-safe)':'var(--red-alert)'};box-shadow:0 0 8px ${apiOnline?'var(--green-safe)':'var(--red-alert)'};animation:blink 1.5s infinite"></div>
         <span style="font-family:var(--font-mono);font-size:12px;color:${apiOnline?'var(--green-safe)':'var(--red-alert)'}">${apiOnline?'CONNECTED — FastAPI Online':'DISCONNECTED — Using Demo Data'}</span>
       </div>
-      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">BASE URL: http://localhost:8000</div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim)">BASE URL: https://drivesafe-backend-harshita.onrender.com</div>
     </div>
     <div id="api-endpoints"></div>
   </div>
