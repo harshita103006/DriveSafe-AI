@@ -1,7 +1,7 @@
 import httpx
 from typing import Any, Dict
 
-OVERPASS_URL = "https://overpass.kumi.systems/api/interpreter"
+OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
 def build_risk_query(lat: float, lng: float, radius_m: int) -> str:
     # Roads + signals/crossings + roundabouts
@@ -40,16 +40,13 @@ def build_help_query(lat: float, lng: float, radius_m: int) -> str:
     out center 30;
     """
 
-async def overpass_post(query: str) -> Dict[str, Any]:
-    async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
-        r = await client.post(
+async def overpass_post(query: str):
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(
             OVERPASS_URL,
-            data={"data": query},
-            headers={
-                "User-Agent": "DriveSafe-AI",
-                "Accept": "application/json"
-            }
+            data=query,
+            headers={"Content-Type": "text/plain"},
         )
+        response.raise_for_status()
+        return response.json()
 
-        r.raise_for_status()
-        return r.json()
