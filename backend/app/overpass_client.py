@@ -1,7 +1,7 @@
 import httpx
 from typing import Any, Dict
 
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+OVERPASS_URL = "https://overpass.kumi.systems/api/interpreter"
 
 def build_risk_query(lat: float, lng: float, radius_m: int) -> str:
     # Roads + signals/crossings + roundabouts
