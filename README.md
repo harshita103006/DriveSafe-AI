@@ -1,138 +1,121 @@
-🚗 DriveSafe-AI
+# 🚗 DriveSafe-AI
 
-Real-Time Driver Safety & Risk Monitoring System
+Real-time AI-powered driver monitoring and fatigue detection system using computer vision and facial analysis.
 
-DriveSafe-AI is an end-to-end intelligent driver safety platform that combines real-time drowsiness detection with environmental risk analysis to proactively prevent road accidents. The system monitors driver alertness using computer vision and augments it with geospatial road-risk intelligence to generate live safety insights.
+<p align="center">
+  <img src="https://img.shields.io/badge/ComputerVision-AI-blue?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/FastAPI-Backend-green?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/MediaPipe-FaceMesh-orange?style=for-the-badge" />
+</p>
 
+---
 
-✨ Key Features
-👁️ Driver Drowsiness Detection
+## 🚀 Overview
 
-Real-time face monitoring using MediaPipe Face Mesh
-Eye Aspect Ratio (EAR) based blink and drowsiness detection
-Instant audible alerts (beep) on drowsy condition
-Floating camera monitoring mode
+DriveSafe-AI is an intelligent driver safety system designed to monitor driver fatigue and detect drowsiness in real time.
 
+The system uses:
+- facial landmark tracking
+- eye aspect ratio analysis
+- real-time monitoring workflows
+- fatigue detection pipelines
 
-🧠 Risk Intelligence Engine
+to enhance road safety through AI-assisted monitoring.
 
-Combines driver state + road environment risk
-Weighted risk scoring model
-Real-time safety level classification (Safe → Critical)
+---
 
+## ⚡ Features
 
-🗺️ Geospatial Risk Analysis
+- 👁️ Real-time face tracking
+- 😴 Drowsiness detection
+- 📷 MediaPipe Face Mesh integration
+- ⚡ Live fatigue analysis
+- 🚨 Alert generation system
+- 📊 Monitoring workflows
+- 🌐 Responsive frontend interface
 
-Road risk evaluation using OpenStreetMap data
-Intersection, crossing, and signal analysis
-Dynamic risk heatmap generation
-Nearby emergency services detection
+---
 
+## 🧠 Tech Stack
 
-📊 Live Dashboard
+### Backend
+- FastAPI
+- Python
 
-Real-time risk meter
-Driver event log
-Heatmap visualization
-Trip lifecycle monitoring
+### Computer Vision
+- OpenCV
+- MediaPipe Face Mesh
 
-🔗 Telemetry & Event Pipeline
+### Frontend
+- HTML
+- CSS
+- JavaScript
 
-Trip start/stop tracking
-Event streaming to backend
-Async FastAPI services
-Scalable REST architecture
+---
 
+## 🏗️ Workflow
 
-🏗️ System Architecture
-Camera → Frontend (JS) → FastAPI Backend → Risk Engine → Dashboard
+```text
+Camera Feed
+     ↓
+Face Detection
+     ↓
+Eye Landmark Extraction
+     ↓
+EAR Calculation
+     ↓
+Fatigue Detection
+     ↓
+Alert Generation
+```
 
-Flow:
+---
 
-Camera captures driver face
-EAR algorithm detects drowsiness
-Frontend sends telemetry events
-Backend computes risk
-Dashboard updates in real time
+## 🚀 Live Demo
 
-🧪 Live vs Demo Components
-Component	Status
-Drowsiness detection	✅ Live
-Camera monitoring	✅ Live
-Trip & event pipeline	✅ Live
-Risk scoring	✅ Live
-Heatmap generation	⚡ Semi-live (OSM based)
-Dashboard charts	🧪 Demo/seeded
-Predictive risk model	🧪 Lightweight heuristic
+https://drive-safe-ai-delta.vercel.app
 
+---
 
-🛠️ Tech Stack
+## 📂 Project Structure
 
-Backend
+```bash
+DriveSafe-AI/
+│── frontend/
+│── backend/
+│── models/
+│── assets/
+│── README.md
+```
 
-Python
-FastAPI
-AsyncIO
-HTTPX
-Computer Vision
-MediaPipe Face Mesh
-OpenCV
-EAR algorithm
+---
 
-Frontend
+## 🚀 Installation
 
-JavaScript
-HTML/CSS
-REST API integration
-Data Sources
-OpenStreetMap (Overpass API)
-
-
-🚀 Getting Started
-
-1️⃣ Clone Repository
-git clone https://github.com/<your-username>/DriveSafe-AI.git
+```bash
+git clone https://github.com/harshita103006/DriveSafe-AI.git
 cd DriveSafe-AI
+```
 
-2️⃣ Backend Setup
-cd backend
-python -m venv venv
-venv\Scripts\activate
+```bash
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+python app.py
+```
 
-Open:
-http://127.0.0.1:8000/docs
+---
 
-3️⃣ Frontend Setup
-cd frontend_static
-python -m http.server 5500
+## 🌌 Future Scope
 
-Open:
-http://localhost:5500
+- Mobile integration
+- Driver behavior analytics
+- Night vision monitoring
+- Multi-driver detection
+- Fleet monitoring systems
 
+---
 
-🎯 Demo Flow
+## 👩‍💻 Author
 
-Click Start Monitoring
-Camera activates
-Drowsiness triggers alert
-Risk meter updates
-Events appear in dashboard
+Harshita Joshi
 
-
-🔒 Design Decisions
-
-Lightweight deterministic logic for real-time reliability
-Async backend for low latency
-Modular architecture for future ML upgrades
-CORS-enabled secure frontend-backend communication
-
-
-🔮 Future Scope
-
-LSTM-based driver fatigue prediction
-Edge deployment for in-vehicle systems
-Fleet-level analytics
-Mobile app integration
-Advanced behavior modeling
+AI Security • Computer Vision • Backend Systems
